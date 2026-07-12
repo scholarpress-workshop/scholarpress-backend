@@ -1,7 +1,12 @@
 use crate::document::{Document, Page, TextSpan};
 use std::path::Path;
+use std::fs;
 
 pub fn extract_document(path: &Path) -> Result<Document, Box<dyn std::error::Error>> {
+    extract_document_raw(path)
+}
+
+fn extract_document_raw(path: &Path) -> Result<Document, Box<dyn std::error::Error>> {
     let doc = pdf_oxide::PdfDocument::open(path)?;
     let page_count = doc.page_count()?;
     let mut pages: Vec<Page> = Vec::with_capacity(page_count);
