@@ -1,8 +1,8 @@
-pub mod document;
 pub mod chunker;
+pub mod document;
+pub mod docx;
 pub mod heading;
 pub mod pdf;
-pub mod docx;
 
 use heading::{detect_headings, HeadingDetectionConfig};
 

@@ -18,7 +18,10 @@ pub struct SignalWeights {
 
 use crate::document::*;
 
-pub fn detect_headings(paragraphs: &mut [ParsedParagraph], config: &HeadingDetectionConfig) -> Vec<Heading> {
+pub fn detect_headings(
+    paragraphs: &mut [ParsedParagraph],
+    config: &HeadingDetectionConfig,
+) -> Vec<Heading> {
     let body_font_size = median_font_size(paragraphs);
     let mut headings = Vec::new();
 
@@ -30,9 +33,15 @@ pub fn detect_headings(paragraphs: &mut [ParsedParagraph], config: &HeadingDetec
     for (i, para) in paragraphs.iter_mut().enumerate() {
         let mut score: f32 = 0.0;
 
-        if para.is_all_caps { score += config.signal_weights.caps; }
-        if para.is_underline { score += config.signal_weights.underline; }
-        if para.is_bold { score += config.signal_weights.bold; }
+        if para.is_all_caps {
+            score += config.signal_weights.caps;
+        }
+        if para.is_underline {
+            score += config.signal_weights.underline;
+        }
+        if para.is_bold {
+            score += config.signal_weights.bold;
+        }
 
         if let Some(fs) = para.font_size {
             if let Some(bfs) = body_font_size {
@@ -42,7 +51,9 @@ pub fn detect_headings(paragraphs: &mut [ParsedParagraph], config: &HeadingDetec
             }
         }
 
-        if numbering_re.is_match(&para.text) { score += config.signal_weights.numbering; }
+        if numbering_re.is_match(&para.text) {
+            score += config.signal_weights.numbering;
+        }
 
         let lower = para.text.to_lowercase();
         if config.context_keywords.iter().any(|kw| lower.contains(kw)) {
@@ -59,7 +70,13 @@ pub fn detect_headings(paragraphs: &mut [ParsedParagraph], config: &HeadingDetec
             } else if para.is_all_caps {
                 1
             } else if let (Some(fs), Some(bfs)) = (para.font_size, body_font_size) {
-                if fs - bfs >= 4.0 { 1 } else if fs - bfs >= 2.0 { 2 } else { 2 }
+                if fs - bfs >= 4.0 {
+                    1
+                } else if fs - bfs >= 2.0 {
+                    2
+                } else {
+                    2
+                }
             } else {
                 2
             };
@@ -81,7 +98,9 @@ pub fn detect_headings(paragraphs: &mut [ParsedParagraph], config: &HeadingDetec
 
 fn median_font_size(paragraphs: &[ParsedParagraph]) -> Option<f32> {
     let mut sizes: Vec<f32> = paragraphs.iter().filter_map(|p| p.font_size).collect();
-    if sizes.is_empty() { return None; }
+    if sizes.is_empty() {
+        return None;
+    }
     sizes.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     Some(sizes[sizes.len() / 2])
 }
@@ -90,17 +109,31 @@ impl Default for HeadingDetectionConfig {
     fn default() -> Self {
         Self {
             signal_weights: SignalWeights {
-                caps: 0.35, underline: 0.35, bold: 0.15,
-                size_jump: 0.0, numbering: 0.10, context: 0.05,
+                caps: 0.35,
+                underline: 0.35,
+                bold: 0.15,
+                size_jump: 0.0,
+                numbering: 0.10,
+                context: 0.05,
             },
             threshold: 0.5,
             size_jump_threshold: 2.0,
             context_keywords: vec![
-                "introduction".into(), "background".into(), "method".into(),
-                "result".into(), "discussion".into(), "conclusion".into(),
-                "chapter".into(), "appendix".into(), "reference".into(),
-                "bibliography".into(), "abstract".into(), "acknowledgment".into(),
-                "preface".into(), "dedication".into(), "contents".into(),
+                "introduction".into(),
+                "background".into(),
+                "method".into(),
+                "result".into(),
+                "discussion".into(),
+                "conclusion".into(),
+                "chapter".into(),
+                "appendix".into(),
+                "reference".into(),
+                "bibliography".into(),
+                "abstract".into(),
+                "acknowledgment".into(),
+                "preface".into(),
+                "dedication".into(),
+                "contents".into(),
                 "summary".into(),
             ],
         }

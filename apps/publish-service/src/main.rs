@@ -1,4 +1,7 @@
 #[tokio::main]
 async fn main() {
-    println!("publish-service starting on port 4000");
+    if let Err(e) = publish_service::run().await {
+        eprintln!("Fatal error: {}", e);
+        std::process::exit(1);
+    }
 }

@@ -1,6 +1,5 @@
 use crate::document::{Document, Page, TextSpan};
 use std::path::Path;
-use std::fs;
 
 pub fn extract_document(path: &Path) -> Result<Document, Box<dyn std::error::Error>> {
     extract_document_raw(path)

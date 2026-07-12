@@ -23,14 +23,13 @@ pub fn run(args: &CalibrateArgs) {
         process::exit(2);
     }
 
-    let cal_report =
-        match sp_validate::calibration::run_calibration(&args.spec, &args.corpus) {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                process::exit(2);
-            }
-        };
+    let cal_report = match sp_validate::calibration::run_calibration(&args.spec, &args.corpus) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            process::exit(2);
+        }
+    };
 
     if args.json {
         match sp_validate::calibration::format_json(&cal_report) {

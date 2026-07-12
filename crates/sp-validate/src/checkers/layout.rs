@@ -73,7 +73,12 @@ fn group_spans_into_lines(spans: &[&crate::document::TextSpan]) -> Vec<Line> {
             current.bottom = current.bottom.max(bottom);
         } else {
             lines.push(current);
-            current = Line { x0, x1, top, bottom };
+            current = Line {
+                x0,
+                x1,
+                top,
+                bottom,
+            };
         }
     }
     lines.push(current);
@@ -145,10 +150,8 @@ impl Checker for MarginsChecker {
             }
 
             let lines = group_spans_into_lines(&raw_body);
-            let full_width: Vec<&Line> = lines
-                .iter()
-                .filter(|l| l.x1 >= page.width * 0.7)
-                .collect();
+            let full_width: Vec<&Line> =
+                lines.iter().filter(|l| l.x1 >= page.width * 0.7).collect();
 
             if full_width.len() < 3 {
                 continue;
@@ -391,7 +394,8 @@ mod tests {
     }
 
     fn symmetry_params() -> Value {
-        serde_yaml::from_str("threshold: 0.25in\nleft: 1.25in\nright: 1.25in\ntolerance: 0.125in\n").unwrap()
+        serde_yaml::from_str("threshold: 0.25in\nleft: 1.25in\nright: 1.25in\ntolerance: 0.125in\n")
+            .unwrap()
     }
 
     fn body_span_bboxes(

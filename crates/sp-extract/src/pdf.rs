@@ -1,6 +1,6 @@
-use pdf_oxide::layout::{TextChar, FontWeight};
-use pdf_oxide::PdfDocument;
 use crate::document::*;
+use pdf_oxide::layout::{FontWeight, TextChar};
+use pdf_oxide::PdfDocument;
 
 pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::Error>> {
     let doc = PdfDocument::from_bytes(bytes.to_vec())?;
@@ -23,7 +23,11 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
         }
 
         let paragraphs = spans_to_paragraphs(&spans, page_idx + 1);
-        let page_text: String = paragraphs.iter().map(|p| p.text.as_str()).collect::<Vec<_>>().join("\n");
+        let page_text: String = paragraphs
+            .iter()
+            .map(|p| p.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
 
         all_paragraphs.extend(paragraphs);
 
@@ -35,7 +39,11 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
         });
     }
 
-    let raw_text: String = pages.iter().map(|p| p.text.as_str()).collect::<Vec<_>>().join("\n\n");
+    let raw_text: String = pages
+        .iter()
+        .map(|p| p.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     Ok(ParsedDocument {
         raw_text,
@@ -92,11 +100,24 @@ fn build_spans(chars: &[TextChar], page_height: f32) -> Vec<TextSpan> {
 
 fn build_word_span(chars: &[&TextChar], page_height: f32) -> TextSpan {
     let first = chars[0];
-let text: String = chars.iter().map(|c| c.char.to_string()).collect::<Vec<_>>().join("");
-    let max_y = chars.iter().map(|c| c.origin_y).fold(f32::NEG_INFINITY, f32::max);
-    let min_y = chars.iter().map(|c| c.origin_y - c.font_size).fold(f32::INFINITY, f32::min);
+    let text: String = chars
+        .iter()
+        .map(|c| c.char.to_string())
+        .collect::<Vec<_>>()
+        .join("");
+    let max_y = chars
+        .iter()
+        .map(|c| c.origin_y)
+        .fold(f32::NEG_INFINITY, f32::max);
+    let min_y = chars
+        .iter()
+        .map(|c| c.origin_y - c.font_size)
+        .fold(f32::INFINITY, f32::min);
     let min_x = chars.iter().map(|c| c.bbox.x).fold(f32::INFINITY, f32::min);
-    let max_x = chars.iter().map(|c| c.bbox.x + c.bbox.width).fold(f32::NEG_INFINITY, f32::max);
+    let max_x = chars
+        .iter()
+        .map(|c| c.bbox.x + c.bbox.width)
+        .fold(f32::NEG_INFINITY, f32::max);
 
     TextSpan {
         text,
@@ -120,10 +141,15 @@ fn spans_to_paragraphs(spans: &[TextSpan], page_number: usize) -> Vec<ParsedPara
         return paragraphs;
     }
 
-    let line_heights: Vec<f32> = spans.windows(2)
+    let line_heights: Vec<f32> = spans
+        .windows(2)
         .filter_map(|w| {
             let gap = (w[1].bbox.0 - w[0].bbox.1).abs();
-            if gap > 0.0 { Some(gap) } else { None }
+            if gap > 0.0 {
+                Some(gap)
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -152,7 +178,10 @@ fn spans_to_paragraphs(spans: &[TextSpan], page_number: usize) -> Vec<ParsedPara
                 is_bold: current_bold,
                 is_italic: current_italic,
                 is_underline: false,
-                is_all_caps: current_text.trim().chars().all(|c| !c.is_alphabetic() || c.is_uppercase()),
+                is_all_caps: current_text
+                    .trim()
+                    .chars()
+                    .all(|c| !c.is_alphabetic() || c.is_uppercase()),
                 is_heading: false,
                 heading_level: None,
                 font_size: current_font_size,
@@ -182,7 +211,10 @@ fn spans_to_paragraphs(spans: &[TextSpan], page_number: usize) -> Vec<ParsedPara
             is_bold: current_bold,
             is_italic: current_italic,
             is_underline: false,
-            is_all_caps: current_text.trim().chars().all(|c| !c.is_alphabetic() || c.is_uppercase()),
+            is_all_caps: current_text
+                .trim()
+                .chars()
+                .all(|c| !c.is_alphabetic() || c.is_uppercase()),
             is_heading: false,
             heading_level: None,
             font_size: current_font_size,

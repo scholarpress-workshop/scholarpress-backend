@@ -71,14 +71,13 @@ pub fn run(args: &CheckArgs) {
         category: args.category.clone(),
     };
 
-    let results =
-        match sp_validate::engine::run_checks(&spec, &args.pdf, &options) {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error running checks: {}", e);
-                process::exit(2);
-            }
-        };
+    let results = match sp_validate::engine::run_checks(&spec, &args.pdf, &options) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error running checks: {}", e);
+            process::exit(2);
+        }
+    };
 
     let report = sp_validate::report::build_report(results);
 

@@ -1,6 +1,6 @@
-use std::io::Read;
-use roxmltree::Node;
 use crate::document::*;
+use roxmltree::Node;
+use std::io::Read;
 
 #[derive(Debug, Clone, Default)]
 struct StyleInfo {
@@ -32,7 +32,10 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
     let doc_tree = roxmltree::Document::parse(&doc_xml)?;
     let paragraphs = parse_paragraphs(doc_tree.root(), &style_map);
 
-    let word_count: usize = paragraphs.iter().map(|p| p.text.split_whitespace().count()).sum();
+    let word_count: usize = paragraphs
+        .iter()
+        .map(|p| p.text.split_whitespace().count())
+        .sum();
     let estimated_pages = (word_count as f32 / 250.0).ceil() as usize;
 
     let mut fonts = std::collections::BTreeSet::new();
@@ -42,7 +45,11 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
         }
     }
 
-    let raw_text: String = paragraphs.iter().map(|p| p.text.clone()).collect::<Vec<_>>().join("\n\n");
+    let raw_text: String = paragraphs
+        .iter()
+        .map(|p| p.text.clone())
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     Ok(ParsedDocument {
         raw_text: raw_text.clone(),
@@ -74,8 +81,14 @@ fn parse_styles(xml: &str) -> std::collections::HashMap<String, StyleInfo> {
     let ns = resolve_ns(doc.root());
     let w_ns = ns.get("w").cloned().unwrap_or_default();
 
-    for style_node in doc.descendants().filter(|n| n.has_tag_name((w_ns.as_str(), "style"))) {
-        let style_id = style_node.attribute((w_ns.as_str(), "styleId")).unwrap_or("").to_string();
+    for style_node in doc
+        .descendants()
+        .filter(|n| n.has_tag_name((w_ns.as_str(), "style")))
+    {
+        let style_id = style_node
+            .attribute((w_ns.as_str(), "styleId"))
+            .unwrap_or("")
+            .to_string();
         if style_id.is_empty() {
             continue;
         }
@@ -87,7 +100,11 @@ fn parse_styles(xml: &str) -> std::collections::HashMap<String, StyleInfo> {
                 info.font_name = rfonts.attribute((w_ns.as_str(), "ascii")).map(String::from);
             }
             if let Some(sz) = find_child(&rpr, &w_ns, "sz") {
-                if let Ok(val) = sz.attribute((w_ns.as_str(), "val")).unwrap_or("0").parse::<f32>() {
+                if let Ok(val) = sz
+                    .attribute((w_ns.as_str(), "val"))
+                    .unwrap_or("0")
+                    .parse::<f32>()
+                {
                     info.font_size_half_pt = Some(val);
                 }
             }
@@ -102,7 +119,10 @@ fn parse_styles(xml: &str) -> std::collections::HashMap<String, StyleInfo> {
     map
 }
 
-fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, StyleInfo>) -> Vec<ParsedParagraph> {
+fn parse_paragraphs(
+    root: Node,
+    style_map: &std::collections::HashMap<String, StyleInfo>,
+) -> Vec<ParsedParagraph> {
     let mut paragraphs = Vec::new();
     let ns = resolve_ns(root);
     let w_ns = ns.get("w").cloned().unwrap_or_default();
@@ -110,7 +130,10 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
     let body = find_child(&root, &w_ns, "body");
     let container = body.as_ref().unwrap_or(&root);
 
-    for p_node in container.descendants().filter(|n| n.has_tag_name((w_ns.as_str(), "p"))) {
+    for p_node in container
+        .descendants()
+        .filter(|n| n.has_tag_name((w_ns.as_str(), "p")))
+    {
         let mut text = String::new();
         let mut bold = false;
         let mut italic = false;
@@ -136,7 +159,10 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
             }
         }
 
-        for r_node in p_node.descendants().filter(|n| n.has_tag_name((w_ns.as_str(), "r"))) {
+        for r_node in p_node
+            .descendants()
+            .filter(|n| n.has_tag_name((w_ns.as_str(), "r")))
+        {
             let mut run_bold = bold;
             let mut run_italic = italic;
             let mut run_underline = underline;
@@ -149,7 +175,11 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
                 run_underline = find_child(&rPr, &w_ns, "u").is_some() || run_underline;
 
                 if let Some(sz) = find_child(&rPr, &w_ns, "sz") {
-                    if let Ok(val) = sz.attribute((w_ns.as_str(), "val")).unwrap_or("0").parse::<f32>() {
+                    if let Ok(val) = sz
+                        .attribute((w_ns.as_str(), "val"))
+                        .unwrap_or("0")
+                        .parse::<f32>()
+                    {
                         run_font_size = Some(val);
                     }
                 }
@@ -160,7 +190,10 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
                 }
             }
 
-            for t_node in r_node.descendants().filter(|n| n.has_tag_name((w_ns.as_str(), "t"))) {
+            for t_node in r_node
+                .descendants()
+                .filter(|n| n.has_tag_name((w_ns.as_str(), "t")))
+            {
                 if let Some(t) = t_node.text() {
                     text.push_str(t);
                 }
@@ -174,7 +207,10 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
         }
 
         if !text.trim().is_empty() {
-            let all_caps = text.trim().chars().all(|c| !c.is_alphabetic() || c.is_uppercase());
+            let all_caps = text
+                .trim()
+                .chars()
+                .all(|c| !c.is_alphabetic() || c.is_uppercase());
             paragraphs.push(ParsedParagraph {
                 text: text.trim().to_string(),
                 page_number: 1,
@@ -195,7 +231,10 @@ fn parse_paragraphs(root: Node, style_map: &std::collections::HashMap<String, St
 
 fn resolve_ns(root: Node) -> std::collections::HashMap<String, String> {
     let mut ns = std::collections::HashMap::new();
-    let w_ns = root.namespaces().filter(|n| n.uri() == "http://schemas.openxmlformats.org/wordprocessingml/2006/main").next();
+    let w_ns = root
+        .namespaces()
+        .filter(|n| n.uri() == "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
+        .next();
     if let Some(n) = w_ns {
         ns.insert("w".to_string(), n.name().unwrap_or("w").to_string());
     }

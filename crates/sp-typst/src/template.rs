@@ -38,7 +38,7 @@ fn collect_typ_files(
         let path = entry.path();
         if path.is_dir() {
             collect_typ_files(base, &path, files)?;
-        } else if path.extension().map_or(false, |e| e == "typ") {
+        } else if path.extension().is_some_and(|e| e == "typ") {
             let relative = path.strip_prefix(base)?.to_string_lossy().to_string();
             let content = std::fs::read_to_string(&path)?;
             files.push(TemplateFile {
@@ -70,7 +70,10 @@ mod tests {
     #[test]
     fn test_render_template_substitutes_variables() {
         let mut vars = std::collections::HashMap::new();
-        vars.insert("TITLE".to_string(), serde_json::Value::String("My Dissertation".to_string()));
+        vars.insert(
+            "TITLE".to_string(),
+            serde_json::Value::String("My Dissertation".to_string()),
+        );
         let result = render_template("#let title = \"{TITLE}\"", &vars);
         assert_eq!(result, "#let title = \"My Dissertation\"");
     }
