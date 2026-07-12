@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 use crate::document::*;
 use roxmltree::Node;
 use std::io::Read;
@@ -233,8 +234,7 @@ fn resolve_ns(root: Node) -> std::collections::HashMap<String, String> {
     let mut ns = std::collections::HashMap::new();
     let w_ns = root
         .namespaces()
-        .filter(|n| n.uri() == "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
-        .next();
+        .find(|n| n.uri() == "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
     if let Some(n) = w_ns {
         ns.insert("w".to_string(), n.name().unwrap_or("w").to_string());
     }

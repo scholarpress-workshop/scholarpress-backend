@@ -18,6 +18,7 @@ pub struct SignalWeights {
 
 use crate::document::*;
 
+#[allow(clippy::if_same_then_else)]
 pub fn detect_headings(
     paragraphs: &mut [ParsedParagraph],
     config: &HeadingDetectionConfig,
@@ -65,15 +66,11 @@ pub fn detect_headings(
                 3
             } else if section_re.is_match(&para.text) {
                 2
-            } else if chapter_re.is_match(&para.text) {
-                1
-            } else if para.is_all_caps {
+            } else if chapter_re.is_match(&para.text) || para.is_all_caps {
                 1
             } else if let (Some(fs), Some(bfs)) = (para.font_size, body_font_size) {
                 if fs - bfs >= 4.0 {
                     1
-                } else if fs - bfs >= 2.0 {
-                    2
                 } else {
                     2
                 }

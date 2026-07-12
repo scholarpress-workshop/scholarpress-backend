@@ -24,7 +24,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .layer(CorsLayer::permissive())
         .layer(axum::middleware::from_fn(request_id_middleware));
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port as u16));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

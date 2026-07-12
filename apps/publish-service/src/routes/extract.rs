@@ -16,7 +16,7 @@ pub async fn handler(
     Query(_params): Query<ExtractParams>,
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    while let Some(field) = multipart
+    if let Some(field) = multipart
         .next_field()
         .await
         .map_err(|e| AppError::Extraction(e.to_string()))?

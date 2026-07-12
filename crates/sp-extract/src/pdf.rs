@@ -79,12 +79,10 @@ fn build_spans(chars: &[TextChar], page_height: f32) -> Vec<TextSpan> {
 
             let is_new_line = y_delta > 3.0;
             let is_word_break = gap > 20.0 || font_changed || size_delta > 1.0;
-
-            if is_new_line || is_word_break {
-                if !current_word.is_empty() {
-                    spans.push(build_word_span(&current_word, page_height));
-                    current_word.clear();
-                }
+            let should_flush = is_new_line || is_word_break;
+            if should_flush && !current_word.is_empty() {
+                spans.push(build_word_span(&current_word, page_height));
+                current_word.clear();
             }
         }
         current_word.push(*ch);
@@ -232,7 +230,7 @@ fn median(values: &[f32]) -> Option<f32> {
     let mut sorted: Vec<f32> = values.to_vec();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let mid = sorted.len() / 2;
-    if sorted.len() % 2 == 0 {
+    if sorted.len().is_multiple_of(2) {
         Some((sorted[mid - 1] + sorted[mid]) / 2.0)
     } else {
         Some(sorted[mid])
