@@ -1090,9 +1090,7 @@ mod tests {
                     page_number: 3,
                     width: 612.0,
                     height: 792.0,
-                    spans: vec![
-                        span("chapter 1 introduction", 200.0),
-                    ],
+                    spans: vec![span("chapter 1 introduction", 200.0)],
                     images: vec![],
                     paths: vec![],
                 },
@@ -1118,9 +1116,7 @@ mod tests {
                     page_number: 2,
                     width: 612.0,
                     height: 792.0,
-                    spans: vec![
-                        span("table of contents", 200.0),
-                    ],
+                    spans: vec![span("table of contents", 200.0)],
                     images: vec![],
                     paths: vec![],
                 },

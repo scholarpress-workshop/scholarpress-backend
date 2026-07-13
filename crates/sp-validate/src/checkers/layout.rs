@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_line_grouping_single_span() {
-        let spans = vec![make_span("solo", (100.0, 112.0, 90.0, 130.0))];
+        let spans = [make_span("solo", (100.0, 112.0, 90.0, 130.0))];
         let refs: Vec<&TextSpan> = spans.iter().collect();
         let lines = group_spans_into_lines(&refs);
         assert_eq!(lines.len(), 1);

@@ -45,9 +45,12 @@ fn test_detect_headings_numbered_section() {
 
 #[test]
 fn test_detect_headings_below_threshold() {
-    let mut paragraphs = vec![
-        make_para("just some regular text that is not a heading", false, false, 12.0),
-    ];
+    let mut paragraphs = vec![make_para(
+        "just some regular text that is not a heading",
+        false,
+        false,
+        12.0,
+    )];
     let config = HeadingDetectionConfig::default();
     let headings = detect_headings(&mut paragraphs, &config);
     assert!(headings.is_empty());
@@ -67,9 +70,7 @@ fn test_median_font_size_detect_heading_above_median() {
 
 #[test]
 fn test_median_font_size_single_no_heading() {
-    let mut paragraphs = vec![
-        make_para("only paragraph", false, false, 12.0),
-    ];
+    let mut paragraphs = vec![make_para("only paragraph", false, false, 12.0)];
     let config = HeadingDetectionConfig::default();
     let headings = detect_headings(&mut paragraphs, &config);
     assert!(headings.is_empty());

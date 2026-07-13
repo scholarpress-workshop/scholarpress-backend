@@ -1078,9 +1078,7 @@ mod tests {
             page_number: 5,
             width: 612.0,
             height: 792.0,
-            spans: vec![
-                span("References", 100.0, 14.0, "Arial"),
-            ],
+            spans: vec![span("References", 100.0, 14.0, "Arial")],
             images: vec![],
             paths: vec![],
         });
@@ -1096,9 +1094,7 @@ mod tests {
             page_number: 8,
             width: 612.0,
             height: 792.0,
-            spans: vec![
-                span("Curriculum Vitae", 100.0, 14.0, "Arial"),
-            ],
+            spans: vec![span("Curriculum Vitae", 100.0, 14.0, "Arial")],
             images: vec![],
             paths: vec![],
         });
@@ -1141,9 +1137,12 @@ mod tests {
             page_number: 2,
             width: 612.0,
             height: 792.0,
-            spans: vec![
-                span("Accepted by the graduate faculty", 80.0, 12.0, "TimesNewRoman"),
-            ],
+            spans: vec![span(
+                "Accepted by the graduate faculty",
+                80.0,
+                12.0,
+                "TimesNewRoman",
+            )],
             images: vec![],
             paths: vec![],
         });

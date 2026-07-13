@@ -52,11 +52,7 @@ fn test_calibrate_subcommand() {
     write!(spec_file, "{}", MOCK_SPEC_YAML).unwrap();
 
     let corpus_dir = tempfile::tempdir().unwrap();
-    std::fs::copy(
-        &baseline,
-        corpus_dir.path().join("test.pdf"),
-    )
-    .unwrap();
+    std::fs::copy(&baseline, corpus_dir.path().join("test.pdf")).unwrap();
 
     let mut cmd = Command::cargo_bin("scholarpress-cli").unwrap();
     cmd.arg("calibrate")
