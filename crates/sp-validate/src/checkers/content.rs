@@ -679,4 +679,24 @@ mod tests {
     fn test_titles_no_match() {
         assert!(!titles_match_norm("chapter 1 power", "chapter 2 methods"));
     }
+
+    #[test]
+    fn test_committee_chair_not_first() {
+        let doc = Document {
+            pages: vec![Page {
+                page_number: 2,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    span("Doctoral Committee", 100.0, 100.0),
+                    span("Jane Smith, Ph.D.", 140.0, 100.0),
+                    span("John Doe, Ph.D., Chair", 180.0, 100.0),
+                ],
+                images: vec![],
+                paths: vec![],
+            }],
+        };
+        let r = CommitteeOrderChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
 }

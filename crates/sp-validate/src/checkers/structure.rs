@@ -1017,4 +1017,127 @@ mod tests {
         assert!(contains_keyword("table of contents", "toc"));
         assert!(!contains_keyword("random text", "abstract"));
     }
+
+    #[test]
+    fn test_acceptance_page_arabic_number_fails() {
+        let doc = Document {
+            pages: vec![
+                Page {
+                    page_number: 1,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![],
+                    images: vec![],
+                    paths: vec![],
+                },
+                Page {
+                    page_number: 2,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![
+                        span("accepted by the graduate faculty", 200.0),
+                        TextSpan {
+                            text: "2".to_string(),
+                            font_name: "Times".to_string(),
+                            font_size: 10.0,
+                            bbox: (750.0, 760.0, 300.0, 330.0),
+                            is_bold: false,
+                            is_italic: false,
+                            color: None,
+                        },
+                    ],
+                    images: vec![],
+                    paths: vec![],
+                },
+            ],
+        };
+        let r = AcceptancePagePageNumberChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_front_matter_arabic_page_number() {
+        let doc = Document {
+            pages: vec![
+                Page {
+                    page_number: 1,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![],
+                    images: vec![],
+                    paths: vec![],
+                },
+                Page {
+                    page_number: 2,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![
+                        span("table of contents", 200.0),
+                        TextSpan {
+                            text: "5".to_string(),
+                            font_name: "Times".to_string(),
+                            font_size: 10.0,
+                            bbox: (750.0, 760.0, 300.0, 330.0),
+                            is_bold: false,
+                            is_italic: false,
+                            color: None,
+                        },
+                    ],
+                    images: vec![],
+                    paths: vec![],
+                },
+                Page {
+                    page_number: 3,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![
+                        span("chapter 1 introduction", 200.0),
+                    ],
+                    images: vec![],
+                    paths: vec![],
+                },
+            ],
+        };
+        let r = PageNumbersFormatChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_headings_inconsistent_font() {
+        let doc = Document {
+            pages: vec![
+                Page {
+                    page_number: 1,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![],
+                    images: vec![],
+                    paths: vec![],
+                },
+                Page {
+                    page_number: 2,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![
+                        span("table of contents", 200.0),
+                    ],
+                    images: vec![],
+                    paths: vec![],
+                },
+                Page {
+                    page_number: 3,
+                    width: 612.0,
+                    height: 792.0,
+                    spans: vec![
+                        span("chapter 1 introduction", 80.0),
+                        span("body text", 300.0),
+                    ],
+                    images: vec![],
+                    paths: vec![],
+                },
+            ],
+        };
+        let r = HeadingsConsistentChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
 }

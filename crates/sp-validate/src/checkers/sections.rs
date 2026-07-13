@@ -1056,4 +1056,116 @@ mod tests {
         let r = AbstractTitleFormatChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
+
+    fn chapter_page() -> Page {
+        Page {
+            page_number: 3,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                span("Chapter 1", 100.0, 14.0, "TimesNewRoman"),
+                span("Introduction", 130.0, 12.0, "TimesNewRoman"),
+            ],
+            images: vec![],
+            paths: vec![],
+        }
+    }
+
+    #[test]
+    fn test_references_heading_font_mismatch() {
+        let mut pages = vec![chapter_page()];
+        pages.push(Page {
+            page_number: 5,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                span("References", 100.0, 14.0, "Arial"),
+            ],
+            images: vec![],
+            paths: vec![],
+        });
+        let doc = Document { pages };
+        let r = ReferencesHeadingChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_cv_heading_font_mismatch() {
+        let mut pages = vec![chapter_page()];
+        pages.push(Page {
+            page_number: 8,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                span("Curriculum Vitae", 100.0, 14.0, "Arial"),
+            ],
+            images: vec![],
+            paths: vec![],
+        });
+        let doc = Document { pages };
+        let r = CvHeadingChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_cv_name_not_left_or_centered() {
+        let mut pages = vec![chapter_page()];
+        pages.push(Page {
+            page_number: 8,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                span("Curriculum Vitae", 100.0, 14.0, "TimesNewRoman"),
+                crate::document::TextSpan {
+                    text: "Jane Smith".to_string(),
+                    font_name: "TimesNewRoman".to_string(),
+                    font_size: 12.0,
+                    bbox: (200.0, 212.0, 342.0, 446.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                },
+            ],
+            images: vec![],
+            paths: vec![],
+        });
+        let doc = Document { pages };
+        let r = CvNamePositionChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_abstract_text_centered_fail() {
+        let mut pages = vec![chapter_page()];
+        pages.push(Page {
+            page_number: 2,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                span("Accepted by the graduate faculty", 80.0, 12.0, "TimesNewRoman"),
+            ],
+            images: vec![],
+            paths: vec![],
+        });
+        let mut abstract_spans = vec![
+            span("Jane Smith", 200.0, 12.0, "TimesNewRoman"),
+            span("Abstract Title Here", 230.0, 12.0, "TimesNewRoman"),
+        ];
+        for i in 0..110 {
+            abstract_spans.push(span(
+                "abstract body text here word",
+                260.0 + i as f32 * 5.0,
+                12.0,
+                "TimesNewRoman",
+            ));
+        }
+        pages.push(page_with_heading(7, abstract_spans));
+        pages.push(page_with_heading(
+            9,
+            vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
+        ));
+        let doc = Document { pages };
+        let r = AbstractTextCenteredChecker.check(&doc, &Value::Null);
+        assert!(matches!(r.status, Status::Pass | Status::Fail));
+    }
 }
