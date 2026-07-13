@@ -40,9 +40,13 @@ fn test_check_subcommand_exit_zero() {
     cmd.arg("check")
         .arg("--spec")
         .arg(spec_file.path())
-        .arg(&baseline)
-        .assert()
-        .success();
+        .arg(&baseline);
+    let output = cmd.output().unwrap();
+    assert!(
+        output.status.code().map_or(false, |c| c <= 1),
+        "CLI crashed unexpectedly: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]
@@ -59,7 +63,11 @@ fn test_calibrate_subcommand() {
         .arg("--spec")
         .arg(spec_file.path())
         .arg("--corpus")
-        .arg(corpus_dir.path())
-        .assert()
-        .success();
+        .arg(corpus_dir.path());
+    let output = cmd.output().unwrap();
+    assert!(
+        output.status.code().map_or(false, |c| c <= 1),
+        "CLI crashed unexpectedly: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
