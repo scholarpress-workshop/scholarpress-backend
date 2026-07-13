@@ -19,7 +19,11 @@ pub fn chunk_text(raw_text: &str, max_chars: usize, overlap: usize) -> Vec<Chunk
             start_char: start,
             end_char: final_end,
         });
-        start = final_end.saturating_sub(overlap);
+        if final_end >= raw_text.len() {
+            break;
+        }
+        let next_start = final_end.saturating_sub(overlap);
+        start = if next_start > start { next_start } else { final_end };
     }
     chunks
 }
