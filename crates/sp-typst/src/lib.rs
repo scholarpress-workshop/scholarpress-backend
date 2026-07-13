@@ -6,7 +6,11 @@ pub mod template;
 
 pub fn compile(source: &str, root: Option<&Path>) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut cmd = Command::new("typst");
-    cmd.arg("compile").arg("--format").arg("pdf").arg("-").arg("-");
+    cmd.arg("compile")
+        .arg("--format")
+        .arg("pdf")
+        .arg("-")
+        .arg("-");
 
     if let Some(r) = root {
         cmd.arg("--root").arg(r);
