@@ -1059,7 +1059,7 @@ mod tests {
 
     fn chapter_page() -> Page {
         Page {
-            page_number: 3,
+            page_number: 1,
             width: 612.0,
             height: 792.0,
             spans: vec![
@@ -1075,7 +1075,7 @@ mod tests {
     fn test_references_heading_font_mismatch() {
         let mut pages = vec![chapter_page()];
         pages.push(Page {
-            page_number: 5,
+            page_number: 2,
             width: 612.0,
             height: 792.0,
             spans: vec![span("References", 100.0, 14.0, "Arial")],
@@ -1091,7 +1091,7 @@ mod tests {
     fn test_cv_heading_font_mismatch() {
         let mut pages = vec![chapter_page()];
         pages.push(Page {
-            page_number: 8,
+            page_number: 2,
             width: 612.0,
             height: 792.0,
             spans: vec![span("Curriculum Vitae", 100.0, 14.0, "Arial")],
@@ -1107,20 +1107,20 @@ mod tests {
     fn test_cv_name_not_left_or_centered() {
         let mut pages = vec![chapter_page()];
         pages.push(Page {
-            page_number: 8,
+            page_number: 2,
             width: 612.0,
             height: 792.0,
             spans: vec![
-                span("Curriculum Vitae", 100.0, 14.0, "TimesNewRoman"),
                 crate::document::TextSpan {
                     text: "Jane Smith".to_string(),
                     font_name: "TimesNewRoman".to_string(),
                     font_size: 12.0,
-                    bbox: (200.0, 212.0, 342.0, 446.0),
+                    bbox: (100.0, 112.0, 342.0, 446.0),
                     is_bold: false,
                     is_italic: false,
                     color: None,
                 },
+                span("Curriculum Vitae", 200.0, 14.0, "TimesNewRoman"),
             ],
             images: vec![],
             paths: vec![],

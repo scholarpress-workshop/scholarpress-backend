@@ -43,7 +43,7 @@ fn test_check_subcommand_exit_zero() {
         .arg(&baseline);
     let output = cmd.output().unwrap();
     assert!(
-        output.status.code().map_or(false, |c| c <= 1),
+        output.status.code().is_some_and(|c| c <= 1),
         "CLI crashed unexpectedly: {}",
         String::from_utf8_lossy(&output.stderr)
     );
@@ -66,7 +66,7 @@ fn test_calibrate_subcommand() {
         .arg(corpus_dir.path());
     let output = cmd.output().unwrap();
     assert!(
-        output.status.code().map_or(false, |c| c <= 1),
+        output.status.code().is_some_and(|c| c <= 1),
         "CLI crashed unexpectedly: {}",
         String::from_utf8_lossy(&output.stderr)
     );
