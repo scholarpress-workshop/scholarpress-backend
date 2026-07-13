@@ -100,7 +100,7 @@ fn median_font_size(paragraphs: &[ParsedParagraph]) -> Option<f32> {
     }
     sizes.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let mid = sizes.len() / 2;
-    if sizes.len() % 2 == 0 {
+    if sizes.len().is_multiple_of(2) {
         Some((sizes[mid - 1] + sizes[mid]) / 2.0)
     } else {
         Some(sizes[mid])
