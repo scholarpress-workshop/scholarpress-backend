@@ -76,6 +76,8 @@ Target: 12 new tests.
 
 **Status**: 2 trivial helper tests (variable substitution, empty dir). `compile()` has zero tests.
 
+**Implementation note**: `sp-typst` currently wraps `typst compile` via `std::process::Command` (subprocess). The original architecture spec called for pulling in the `typst` crate as a native library dependency. When that migration happens, the `has_typst_binary()` gate in tests becomes unnecessary — the compiler runs in-process and tests execute without a system binary requirement.
+
 #### New Tests
 
 **Test: `test_compile_valid_typst`** — compile minimal Typst source, assert output starts with `%PDF-`:
@@ -100,7 +102,7 @@ fn test_compile_invalid_typst() {
 }
 ```
 
-Helper: `fn has_typst_binary() -> bool` checks `which::which("typst").is_ok()`.
+Helper: `fn has_typst_binary() -> bool` checks `which::which("typst").is_ok()`. This gate is needed because `sp-typst` currently shells out to the system `typst` binary via `std::process::Command`. Once `sp-typst` migrates to the native `typst` crate as a library dependency (eliminating the subprocess), `has_typst_binary()` becomes unnecessary — the compiler is compiled directly into the test artifact and runs in-memory.
 
 Target: 2 new tests.
 
@@ -171,11 +173,13 @@ checks:
 | `test_template_returns_files` | `GET /institutions/test/template` | 200, entry is "template.typ", files non-empty |
 | `test_template_not_found` | `GET /institutions/nonexistent/template` | 404 |
 | `test_extract_no_file` | `POST /extract` (empty body) | 500, error message contains "No file" |
-| `test_compile_missing_institution` | `POST /compile` (missing `?institution=`) | 500 |
+| `test_compile_missing_institution` | `POST /compile` (missing `?institution=`) | 500 (gated on `has_typst_binary()`, skipped if absent) |
 | `test_validate_invalid_base64` | `POST /validate` (garbage base64) | 500, error message contains "Invalid base64" |
 | `test_validate_missing_institution` | `POST /validate` (valid base64, missing institution) | 404 |
 
 Tests use `tower::ServiceExt` or `axum_test::TestServer` to send real HTTP requests to the router. No actual PDF/DOCX files needed for route-level tests — just verify status codes, error messages, and JSON structure.
+
+**Binary gate**: The `POST /compile` route test must guard on `has_typst_binary()` and skip if absent (same helper as 3.2). The `POST /validate` route calls `sp_validate::engine::run_checks()` directly as a library call and does not require the typst binary.
 
 Target: 10 new tests.
 
