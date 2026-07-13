@@ -99,7 +99,12 @@ fn median_font_size(paragraphs: &[ParsedParagraph]) -> Option<f32> {
         return None;
     }
     sizes.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    Some(sizes[sizes.len() / 2])
+    let mid = sizes.len() / 2;
+    if sizes.len() % 2 == 0 {
+        Some((sizes[mid - 1] + sizes[mid]) / 2.0)
+    } else {
+        Some(sizes[mid])
+    }
 }
 
 impl Default for HeadingDetectionConfig {
@@ -108,12 +113,12 @@ impl Default for HeadingDetectionConfig {
             signal_weights: SignalWeights {
                 caps: 0.35,
                 underline: 0.35,
-                bold: 0.15,
-                size_jump: 0.0,
-                numbering: 0.10,
+                bold: 0.20,
+                size_jump: 0.20,
+                numbering: 0.35,
                 context: 0.05,
             },
-            threshold: 0.5,
+            threshold: 0.4,
             size_jump_threshold: 2.0,
             context_keywords: vec![
                 "introduction".into(),
