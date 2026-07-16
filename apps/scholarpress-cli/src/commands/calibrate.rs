@@ -23,7 +23,7 @@ pub fn run(args: &CalibrateArgs) {
         process::exit(2);
     }
 
-    let cal_report = match sp_validate::calibration::run_calibration(&args.spec, &args.corpus) {
+    let cal_report = match sp_check::calibration::run_calibration(&args.spec, &args.corpus) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -32,7 +32,7 @@ pub fn run(args: &CalibrateArgs) {
     };
 
     if args.json {
-        match sp_validate::calibration::format_json(&cal_report) {
+        match sp_check::calibration::format_json(&cal_report) {
             Ok(output) => println!("{}", output),
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -40,7 +40,7 @@ pub fn run(args: &CalibrateArgs) {
             }
         }
     } else {
-        println!("{}", sp_validate::calibration::format_text(&cal_report));
+        println!("{}", sp_check::calibration::format_text(&cal_report));
     }
 
     if cal_report.automated_fail_count() > 0 {

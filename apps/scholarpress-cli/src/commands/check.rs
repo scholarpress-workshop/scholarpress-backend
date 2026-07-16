@@ -40,7 +40,10 @@ pub fn run(args: &CheckArgs) {
     }
 
     if args.dump_extract {
-        match sp_validate::extractor::extract_document(&args.pdf) {
+        match sp_extract::extract_pdf(&std::fs::read(&args.pdf).unwrap_or_else(|e| {
+            eprintln!("Error reading PDF: {}", e);
+            process::exit(2);
+        })) {
             Ok(doc) => match serde_json::to_string_pretty(&doc) {
                 Ok(output) => {
                     println!("{}", output);
@@ -58,7 +61,7 @@ pub fn run(args: &CheckArgs) {
         }
     }
 
-    let spec = match sp_validate::spec::load_spec(&args.spec) {
+    let spec = match sp_check::spec::load_spec(&args.spec) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("Error loading spec: {}", e);
@@ -66,12 +69,12 @@ pub fn run(args: &CheckArgs) {
         }
     };
 
-    let options = sp_validate::engine::CheckOptions {
+    let options = sp_check::engine::CheckOptions {
         check_id: args.check.clone(),
         category: args.category.clone(),
     };
 
-    let results = match sp_validate::engine::run_checks(&spec, &args.pdf, &options) {
+    let results = match sp_check::engine::run_checks(&spec, &args.pdf, &options) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Error running checks: {}", e);
@@ -79,10 +82,10 @@ pub fn run(args: &CheckArgs) {
         }
     };
 
-    let report = sp_validate::report::build_report(results);
+    let report = sp_check::report::build_report(results);
 
     if args.json {
-        match sp_validate::report::format_json(&report) {
+        match sp_check::report::format_json(&report) {
             Ok(output) => println!("{}", output),
             Err(e) => {
                 eprintln!("Error formatting JSON: {}", e);
@@ -90,9 +93,9 @@ pub fn run(args: &CheckArgs) {
             }
         }
     } else if args.quiet {
-        print!("{}", sp_validate::report::format_text_quiet(&report));
+        print!("{}", sp_check::report::format_text_quiet(&report));
     } else {
-        println!("{}", sp_validate::report::format_text(&report));
+        println!("{}", sp_check::report::format_text(&report));
     }
 
     if report.summary.fail > 0 || report.summary.error > 0 {

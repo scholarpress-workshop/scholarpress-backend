@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 sp-extract = { path = "../../crates/sp-extract" }
-sp-validate = { path = "../../crates/sp-validate" }
+sp-check = { path = "../../crates/sp-check" }
 sp-typst = { path = "../../crates/sp-typst" }
 axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }

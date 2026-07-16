@@ -7,7 +7,7 @@ use serde_json::json;
 pub enum AppError {
     Extraction(String),
     Compilation(String),
-    Validation(String),
+    Check(String),
     InstitutionNotFound(String),
     Internal(String),
 }
@@ -17,7 +17,7 @@ impl std::fmt::Display for AppError {
         match self {
             AppError::Extraction(m) => write!(f, "Extraction failed: {}", m),
             AppError::Compilation(m) => write!(f, "Compilation failed: {}", m),
-            AppError::Validation(m) => write!(f, "Validation failed: {}", m),
+            AppError::Check(m) => write!(f, "Check failed: {}", m),
             AppError::InstitutionNotFound(m) => write!(f, "Institution not found: {}", m),
             AppError::Internal(m) => write!(f, "Internal error: {}", m),
         }

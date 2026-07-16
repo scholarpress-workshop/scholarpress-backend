@@ -3,7 +3,7 @@ pub mod extract;
 pub mod institutions;
 pub mod spec;
 pub mod template;
-pub mod validate;
+pub mod check;
 
 use crate::institutions::Registry;
 use axum::{
@@ -17,8 +17,8 @@ pub fn router(registry: Registry) -> Router {
         .route("/extract", post(extract::handler))
         .route("/compile", post(compile::handler))
         .route(
-            "/validate",
-            post(validate::handler).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+            "/check",
+            post(check::handler).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
         )
         .route("/health", get(|| async { "ok" }))
         .route("/institutions", get(institutions::handler))
