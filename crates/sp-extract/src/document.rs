@@ -13,10 +13,17 @@ pub struct TextSpan {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ParsedPage {
-    pub number: usize,
+    pub page_number: usize,
     pub text: String,
     pub width: f32,
     pub height: f32,
+    /// Word-level glyph spans on this page. Bbox tuple is (top, bottom, x0, x1)
+    /// in page-space coordinates (origin at top-left, Y increases downward).
+    pub spans: Vec<TextSpan>,
+    /// Image bounding boxes as (top, bottom, x0, x1) in page-space coordinates.
+    pub images: Vec<(f32, f32, f32, f32)>,
+    /// Path/vector bounding boxes as (top, bottom, x0, x1) in page-space coordinates.
+    pub paths: Vec<(f32, f32, f32, f32)>,
 }
 
 #[derive(Debug, Clone, Serialize)]

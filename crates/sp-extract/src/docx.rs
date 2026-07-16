@@ -55,10 +55,13 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
     Ok(ParsedDocument {
         raw_text: raw_text.clone(),
         pages: vec![ParsedPage {
-            number: 1,
+            page_number: 1,
             text: raw_text.clone(),
             width: 612.0,
             height: 792.0,
+            spans: Vec::new(),
+            images: Vec::new(),
+            paths: Vec::new(),
         }],
         paragraphs,
         headings: Vec::new(),

@@ -32,10 +32,13 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
         all_paragraphs.extend(paragraphs);
 
         pages.push(ParsedPage {
-            number: page_idx + 1,
+            page_number: page_idx + 1,
             text: page_text,
             width,
             height,
+            spans,
+            images: Vec::new(),
+            paths: Vec::new(),
         });
     }
 
