@@ -25,7 +25,7 @@ checks:
 
 fn baseline_pdf_path() -> String {
     format!(
-        "{}/crates/sp-validate/tests/fixtures/margins/baseline.pdf",
+        "{}/crates/sp-check/tests/fixtures/margins/baseline.pdf",
         env!("CARGO_MANIFEST_DIR").trim_end_matches("/apps/scholarpress-cli")
     )
 }

@@ -213,7 +213,7 @@ async fn test_validate_invalid_base64() {
         .oneshot(
             Request::builder()
                 .method(Method::POST)
-                .uri("/validate")
+                .uri("/check")
                 .header("content-type", "application/json")
                 .body(Body::from(body))
                 .unwrap(),
@@ -240,7 +240,7 @@ async fn test_validate_missing_institution() {
         .oneshot(
             Request::builder()
                 .method(Method::POST)
-                .uri("/validate")
+                .uri("/check")
                 .header("content-type", "application/json")
                 .body(Body::from(body))
                 .unwrap(),
