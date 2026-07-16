@@ -5,6 +5,8 @@ use crate::spec::load_spec;
 use serde::Serialize;
 use std::path::Path;
 
+const AUTO_CATS: &[&str] = &["layout", "typography", "structure", "content"];
+
 #[derive(Debug, Serialize)]
 pub struct DocumentResult {
     pub document: String,
@@ -38,10 +40,9 @@ impl CalibrationReport {
     const SYSTEMIC_THRESHOLD: f32 = 0.5;
 
     fn automated_checks(&self) -> Vec<&CheckFrequency> {
-        let auto_cats = ["layout", "typography", "structure", "content"];
         self.check_frequencies
             .iter()
-            .filter(|f| auto_cats.contains(&f.category.as_str()))
+            .filter(|f| AUTO_CATS.contains(&f.category.as_str()))
             .collect()
     }
 
@@ -188,11 +189,10 @@ pub fn format_text(report: &CalibrationReport) -> String {
     lines.push("AUTOMATED CHECKS".to_string());
     lines.push(String::new());
 
-    let auto_cats = ["layout", "typography", "structure", "content"];
     let auto_checks: Vec<_> = report
         .check_frequencies
         .iter()
-        .filter(|f| auto_cats.contains(&f.category.as_str()))
+        .filter(|f| AUTO_CATS.contains(&f.category.as_str()))
         .collect();
 
     for freq in &auto_checks {
@@ -230,7 +230,7 @@ pub fn format_text(report: &CalibrationReport) -> String {
     let manual_checks: Vec<_> = report
         .check_frequencies
         .iter()
-        .filter(|f| !auto_cats.contains(&f.category.as_str()))
+        .filter(|f| !AUTO_CATS.contains(&f.category.as_str()))
         .collect();
 
     if !manual_checks.is_empty() {

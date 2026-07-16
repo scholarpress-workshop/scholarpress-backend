@@ -23,11 +23,9 @@ checks:
       right: 1.25in
 "#;
 
-fn baseline_pdf_path() -> String {
-    format!(
-        "{}/crates/sp-check/tests/fixtures/margins/baseline.pdf",
-        env!("CARGO_MANIFEST_DIR").trim_end_matches("/apps/scholarpress-cli")
-    )
+fn baseline_pdf_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../crates/sp-check/tests/fixtures/margins/baseline.pdf")
 }
 
 #[test]

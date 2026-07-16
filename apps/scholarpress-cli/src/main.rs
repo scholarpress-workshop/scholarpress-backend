@@ -1,4 +1,5 @@
-mod commands;
+mod calibrate;
+mod check;
 
 use clap::{Parser, Subcommand};
 
@@ -14,15 +15,15 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Run checks against a single dissertation PDF
-    Check(commands::check::CheckArgs),
+    Check(check::CheckArgs),
     /// Run checks across a corpus of PDFs for calibration
-    Calibrate(commands::calibrate::CalibrateArgs),
+    Calibrate(calibrate::CalibrateArgs),
 }
 
 fn main() {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Check(args) => commands::check::run(args),
-        Commands::Calibrate(args) => commands::calibrate::run(args),
+        Commands::Check(args) => check::run(args),
+        Commands::Calibrate(args) => calibrate::run(args),
     }
 }

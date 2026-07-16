@@ -1,19 +1,10 @@
 use crate::error::AppError;
-use crate::institutions::Registry;
 use axum::{
-    extract::{Multipart, Query, State},
+    extract::Multipart,
     Json,
 };
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-pub struct ExtractParams {
-    pub institution: Option<String>,
-}
 
 pub async fn handler(
-    State(_registry): State<Registry>,
-    Query(_params): Query<ExtractParams>,
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, AppError> {
     if let Some(field) = multipart

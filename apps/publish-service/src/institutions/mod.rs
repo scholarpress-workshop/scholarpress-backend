@@ -1,16 +1,12 @@
-use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct Institution {
     pub id: String,
     pub name: String,
     pub spec: serde_yaml::Value,
     pub template_dir: std::path::PathBuf,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub llm_config: Option<serde_yaml::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ui_config: Option<serde_yaml::Value>,
 }
 
@@ -56,14 +52,6 @@ impl Registry {
                 .unwrap_or(&id)
                 .to_string();
 
-            let llm_config = path.join("llm.yaml");
-            let llm = if llm_config.exists() {
-                let s = std::fs::read_to_string(&llm_config)?;
-                Some(serde_yaml::from_str(&s)?)
-            } else {
-                None
-            };
-
             let ui_config = path.join("ui.yaml");
             let ui = if ui_config.exists() {
                 let s = std::fs::read_to_string(&ui_config)?;
@@ -79,7 +67,6 @@ impl Registry {
                     name,
                     spec,
                     template_dir,
-                    llm_config: llm,
                     ui_config: ui,
                 },
             );
