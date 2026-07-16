@@ -18,6 +18,35 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
         let chars: Vec<TextChar> = doc.extract_chars(page_idx)?;
         let spans = build_spans(&chars, height);
 
+        let images: Vec<(f32, f32, f32, f32)> = match doc.extract_images(page_idx) {
+            Ok(imgs) => imgs
+                .iter()
+                .filter_map(|img| {
+                    let bbox = img.bbox()?;
+                    let img_top = height - (bbox.y + bbox.height);
+                    let img_bottom = height - bbox.y;
+                    let img_x0 = bbox.x;
+                    let img_x1 = bbox.x + bbox.width;
+                    Some((img_top.max(0.0), img_bottom, img_x0, img_x1))
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        };
+
+        let paths: Vec<(f32, f32, f32, f32)> = match doc.extract_paths(page_idx) {
+            Ok(ps) => ps
+                .iter()
+                .map(|p| {
+                    let path_top = height - (p.bbox.y + p.bbox.height);
+                    let path_bottom = height - p.bbox.y;
+                    let path_x0 = p.bbox.x;
+                    let path_x1 = p.bbox.x + p.bbox.width;
+                    (path_top.max(0.0), path_bottom, path_x0, path_x1)
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        };
+
         for span in &spans {
             all_fonts.insert(span.font_name.clone());
         }
@@ -37,8 +66,8 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
             width,
             height,
             spans,
-            images: Vec::new(),
-            paths: Vec::new(),
+            images,
+            paths,
         });
     }
 
@@ -132,7 +161,7 @@ fn build_word_span(chars: &[&TextChar], page_height: f32) -> TextSpan {
         ),
         is_bold: matches!(first.font_weight, FontWeight::Bold),
         is_italic: first.is_italic,
-        color: None,
+        color: Some((first.color.r, first.color.g, first.color.b)),
     }
 }
 
