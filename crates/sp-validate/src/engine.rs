@@ -1,7 +1,7 @@
 use crate::checkers::{get_checker, CheckResult, Status};
-use crate::extractor::extract_document;
 use crate::spec::InstitutionSpec;
 use std::path::Path;
+use sp_extract::document::ParsedDocument;
 
 #[derive(Default)]
 pub struct CheckOptions {
@@ -14,7 +14,8 @@ pub fn run_checks(
     pdf_path: &Path,
     options: &CheckOptions,
 ) -> Result<Vec<CheckResult>, Box<dyn std::error::Error>> {
-    let doc = extract_document(pdf_path)?;
+    let bytes = std::fs::read(pdf_path)?;
+    let doc: ParsedDocument = sp_extract::extract_pdf(&bytes)?;
     let mut results: Vec<CheckResult> = Vec::new();
 
     for check_def in &spec.checks {
