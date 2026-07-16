@@ -1,5 +1,5 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 
 fn parse_measurement(value: &str) -> Result<f32, String> {
@@ -44,11 +44,11 @@ struct Line {
     bottom: f32,
 }
 
-fn group_spans_into_lines(spans: &[&crate::document::TextSpan]) -> Vec<Line> {
+fn group_spans_into_lines(spans: &[&sp_extract::document::TextSpan]) -> Vec<Line> {
     if spans.is_empty() {
         return vec![];
     }
-    let mut sorted: Vec<&&crate::document::TextSpan> = spans.iter().collect();
+    let mut sorted: Vec<&&sp_extract::document::TextSpan> = spans.iter().collect();
     sorted.sort_by(|a, b| {
         a.bbox
             .0
@@ -137,7 +137,7 @@ impl Checker for MarginsChecker {
                 continue;
             }
 
-            let raw_body: Vec<&crate::document::TextSpan> = page
+            let raw_body: Vec<&sp_extract::document::TextSpan> = page
                 .spans
                 .iter()
                 .filter(|s| {
@@ -298,7 +298,7 @@ impl Checker for MarginSymmetryChecker {
                 continue;
             }
 
-            let raw_body: Vec<&crate::document::TextSpan> = page
+            let raw_body: Vec<&sp_extract::document::TextSpan> = page
                 .spans
                 .iter()
                 .filter(|s| {
@@ -375,7 +375,7 @@ impl Checker for MarginSymmetryChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page, TextSpan};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page, TextSpan};
 
     fn make_span(text: &str, bbox: (f32, f32, f32, f32)) -> TextSpan {
         TextSpan {
@@ -425,8 +425,8 @@ mod tests {
         for (i, &(_, _, _, _, text)) in extra.iter().enumerate() {
             spans[body_bboxes.len() + i].text = text.to_string();
         }
-        Document {
-            pages: vec![Page {
+        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
@@ -510,8 +510,8 @@ mod tests {
             (228.0, 240.0, 90.0, 522.0),
             (252.0, 264.0, 90.0, 522.0),
         ];
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_margins_error_empty() {
-        let doc = Document { pages: vec![] };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Error);
     }

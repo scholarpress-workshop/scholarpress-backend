@@ -1,9 +1,9 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 use std::collections::BTreeMap;
 
-fn find_toc_page(doc: &Document) -> Option<&crate::document::Page> {
+fn find_toc_page(doc: &Document) -> Option<&sp_extract::document::ParsedPage> {
     doc.pages.iter().find(|p| {
         let text: String = p
             .spans
@@ -15,8 +15,8 @@ fn find_toc_page(doc: &Document) -> Option<&crate::document::Page> {
     })
 }
 
-fn toc_lines(page: &crate::document::Page) -> Vec<(f32, f32, f32, f32, String)> {
-    let mut lines: BTreeMap<i32, Vec<&crate::document::TextSpan>> = BTreeMap::new();
+fn toc_lines(page: &sp_extract::document::ParsedPage) -> Vec<(f32, f32, f32, f32, String)> {
+    let mut lines: BTreeMap<i32, Vec<&sp_extract::document::TextSpan>> = BTreeMap::new();
     for s in &page.spans {
         if !s.text.trim().is_empty() {
             let top_key = s.bbox.0.round() as i32;
@@ -326,10 +326,10 @@ impl Checker for TocCvNoDotsChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page};
 
-    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> crate::document::TextSpan {
-        crate::document::TextSpan {
+    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> sp_extract::document::TextSpan {
+        sp_extract::document::TextSpan {
             text: text.to_string(),
             font_name: "Times".to_string(),
             font_size: 12.0,
@@ -340,9 +340,9 @@ mod tests {
         }
     }
 
-    fn make_toc_page(spans: Vec<crate::document::TextSpan>) -> Document {
-        Document {
-            pages: vec![Page {
+    fn make_toc_page(spans: Vec<sp_extract::document::TextSpan>) -> Document {
+        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 5,
                 width: 612.0,
                 height: 792.0,

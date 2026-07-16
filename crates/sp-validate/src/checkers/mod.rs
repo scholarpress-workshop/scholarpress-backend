@@ -1,4 +1,4 @@
-use crate::document::Document;
+use sp_extract::document::ParsedDocument;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -40,7 +40,7 @@ pub struct CheckResult {
 pub trait Checker: Send + Sync {
     fn category(&self) -> &'static str;
     fn name(&self) -> &'static str;
-    fn check(&self, doc: &Document, params: &serde_yaml::Value) -> CheckResult;
+    fn check(&self, doc: &ParsedDocument, params: &serde_yaml::Value) -> CheckResult;
 }
 
 type CheckerFactory = fn() -> Box<dyn Checker>;

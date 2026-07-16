@@ -1,6 +1,6 @@
 use crate::checkers::typography::normalize_family;
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 use std::collections::HashMap;
 
@@ -21,7 +21,7 @@ pub(crate) fn find_section_pages(doc: &Document, keywords: &[&str]) -> Vec<usize
         .collect()
 }
 
-fn find_abstract_page(doc: &Document) -> Option<&crate::document::Page> {
+fn find_abstract_page(doc: &Document) -> Option<&sp_extract::document::ParsedPage> {
     if let Some(p) = doc.pages.iter().find(|p| {
         let text: String = p
             .spans
@@ -127,11 +127,11 @@ fn body_style(doc: &Document) -> (String, f32) {
     (family, sz as f32 / 10.0)
 }
 
-fn page_center(page: &crate::document::Page) -> f32 {
+fn page_center(page: &sp_extract::document::ParsedPage) -> f32 {
     page.width / 2.0
 }
 
-fn line_center(spans: &[&&crate::document::TextSpan]) -> f32 {
+fn line_center(spans: &[&&sp_extract::document::TextSpan]) -> f32 {
     let left = spans
         .iter()
         .map(|s| s.bbox.2)
@@ -507,7 +507,7 @@ impl Checker for CvNamePositionChecker {
             };
         }
 
-        let mut non_empty: Vec<&crate::document::TextSpan> = page
+        let mut non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| {
@@ -523,7 +523,7 @@ impl Checker for CvNamePositionChecker {
         });
 
         let first_top = non_empty[0].bbox.0;
-        let name_spans: Vec<&&crate::document::TextSpan> = non_empty
+        let name_spans: Vec<&&sp_extract::document::TextSpan> = non_empty
             .iter()
             .filter(|s| (s.bbox.0 - first_top).abs() < 6.0)
             .collect();
@@ -599,7 +599,7 @@ impl Checker for AbstractTextCenteredChecker {
         let pc = page_center(page);
         let tolerance = 36.0;
 
-        let non_empty: Vec<&crate::document::TextSpan> = page
+        let non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| {
@@ -638,7 +638,7 @@ impl Checker for AbstractTextCenteredChecker {
         let first_top = body_sort[0].0 as f32;
         let second_top = body_sort[1].0 as f32;
         let name_lines: Vec<i32> = {
-            let mut group: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+            let mut group: std::collections::BTreeMap<i32, Vec<&&sp_extract::document::TextSpan>> =
                 std::collections::BTreeMap::new();
             for s in &non_empty {
                 let tk = s.bbox.0.round() as i32;
@@ -652,7 +652,7 @@ impl Checker for AbstractTextCenteredChecker {
         };
 
         let title_lines: Vec<i32> = {
-            let mut group: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+            let mut group: std::collections::BTreeMap<i32, Vec<&&sp_extract::document::TextSpan>> =
                 std::collections::BTreeMap::new();
             for s in &non_empty {
                 let tk = s.bbox.0.round() as i32;
@@ -668,7 +668,7 @@ impl Checker for AbstractTextCenteredChecker {
         let mut violations: Vec<EvidenceItem> = Vec::new();
 
         for top in &name_lines {
-            let spans: Vec<&&crate::document::TextSpan> = non_empty
+            let spans: Vec<&&sp_extract::document::TextSpan> = non_empty
                 .iter()
                 .filter(|s| (s.bbox.0.round() as i32 - top).abs() < 3)
                 .collect();
@@ -686,7 +686,7 @@ impl Checker for AbstractTextCenteredChecker {
         }
 
         for top in &title_lines {
-            let spans: Vec<&&crate::document::TextSpan> = non_empty
+            let spans: Vec<&&sp_extract::document::TextSpan> = non_empty
                 .iter()
                 .filter(|s| (s.bbox.0.round() as i32 - top).abs() < 3)
                 .collect();
@@ -808,7 +808,7 @@ impl Checker for AbstractTitleFormatChecker {
             }
         };
 
-        let non_empty: Vec<&crate::document::TextSpan> = page
+        let non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| {
@@ -837,7 +837,7 @@ impl Checker for AbstractTitleFormatChecker {
         } else {
             tops[0].0 as f32
         };
-        let title_spans: Vec<&&crate::document::TextSpan> = non_empty
+        let title_spans: Vec<&&sp_extract::document::TextSpan> = non_empty
             .iter()
             .filter(|s| (s.bbox.0 - second_top).abs() < 6.0)
             .collect();
@@ -892,10 +892,10 @@ impl Checker for AbstractTitleFormatChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page};
 
-    fn span(text: &str, top: f32, fs: f32, fam: &str) -> crate::document::TextSpan {
-        crate::document::TextSpan {
+    fn span(text: &str, top: f32, fs: f32, fam: &str) -> sp_extract::document::TextSpan {
+        sp_extract::document::TextSpan {
             text: text.to_string(),
             font_name: fam.to_string(),
             font_size: fs,
@@ -918,7 +918,7 @@ mod tests {
                     "TimesNewRoman",
                 ));
             }
-            pages.push(Page {
+            pages.push(Page { text: String::new(),
                 page_number: i,
                 width: 612.0,
                 height: 792.0,
@@ -930,8 +930,8 @@ mod tests {
         pages
     }
 
-    fn page_with_heading(pn: usize, spans: Vec<crate::document::TextSpan>) -> Page {
-        Page {
+    fn page_with_heading(pn: usize, spans: Vec<sp_extract::document::TextSpan>) -> Page {
+        Page { text: String::new(),
             page_number: pn,
             width: 612.0,
             height: 792.0,
@@ -951,7 +951,7 @@ mod tests {
                 span("Smith, J. (2020)", 130.0, 12.0, "TimesNewRoman"),
             ],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = ReferencesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }
@@ -966,7 +966,7 @@ mod tests {
                 span("Smith, J. (2020)", 130.0, 10.0, "Arial"),
             ],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = ReferencesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }
@@ -997,7 +997,7 @@ mod tests {
             9,
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = AbstractWordCountChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
@@ -1022,7 +1022,7 @@ mod tests {
             9,
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = AbstractTitleFormatChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
@@ -1052,13 +1052,13 @@ mod tests {
             9,
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = AbstractTitleFormatChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
 
     fn chapter_page() -> Page {
-        Page {
+        Page { text: String::new(),
             page_number: 1,
             width: 612.0,
             height: 792.0,
@@ -1074,7 +1074,7 @@ mod tests {
     #[test]
     fn test_references_heading_font_mismatch() {
         let mut pages = vec![chapter_page()];
-        pages.push(Page {
+        pages.push(Page { text: String::new(),
             page_number: 2,
             width: 612.0,
             height: 792.0,
@@ -1082,7 +1082,7 @@ mod tests {
             images: vec![],
             paths: vec![],
         });
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = ReferencesHeadingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }
@@ -1090,7 +1090,7 @@ mod tests {
     #[test]
     fn test_cv_heading_font_mismatch() {
         let mut pages = vec![chapter_page()];
-        pages.push(Page {
+        pages.push(Page { text: String::new(),
             page_number: 2,
             width: 612.0,
             height: 792.0,
@@ -1098,7 +1098,7 @@ mod tests {
             images: vec![],
             paths: vec![],
         });
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = CvHeadingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }
@@ -1106,12 +1106,12 @@ mod tests {
     #[test]
     fn test_cv_name_not_left_or_centered() {
         let mut pages = vec![chapter_page()];
-        pages.push(Page {
+        pages.push(Page { text: String::new(),
             page_number: 2,
             width: 612.0,
             height: 792.0,
             spans: vec![
-                crate::document::TextSpan {
+                sp_extract::document::TextSpan {
                     text: "Jane Smith".to_string(),
                     font_name: "TimesNewRoman".to_string(),
                     font_size: 12.0,
@@ -1125,7 +1125,7 @@ mod tests {
             images: vec![],
             paths: vec![],
         });
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = CvNamePositionChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }
@@ -1133,7 +1133,7 @@ mod tests {
     #[test]
     fn test_abstract_text_centered_fail() {
         let mut pages = vec![chapter_page()];
-        pages.push(Page {
+        pages.push(Page { text: String::new(),
             page_number: 2,
             width: 612.0,
             height: 792.0,
@@ -1163,7 +1163,7 @@ mod tests {
             9,
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = AbstractTextCenteredChecker.check(&doc, &Value::Null);
         assert!(matches!(r.status, Status::Pass | Status::Fail));
     }

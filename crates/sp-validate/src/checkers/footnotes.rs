@@ -1,6 +1,6 @@
 use crate::checkers::typography::normalize_family;
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 use std::collections::HashMap;
 
@@ -94,7 +94,7 @@ impl Checker for FootnotesFontChecker {
                 continue;
             }
 
-            let footnote_spans: Vec<&crate::document::TextSpan> = page
+            let footnote_spans: Vec<&sp_extract::document::TextSpan> = page
                 .spans
                 .iter()
                 .filter(|s| {
@@ -155,10 +155,10 @@ impl Checker for FootnotesFontChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page};
 
-    fn span(text: &str, top: f32, font_size: f32, font_name: &str) -> crate::document::TextSpan {
-        crate::document::TextSpan {
+    fn span(text: &str, top: f32, font_size: f32, font_name: &str) -> sp_extract::document::TextSpan {
+        sp_extract::document::TextSpan {
             text: text.to_string(),
             font_name: font_name.to_string(),
             font_size,
@@ -179,7 +179,7 @@ mod tests {
                 "TimesNewRoman",
             ));
         }
-        Page {
+        Page { text: String::new(),
             page_number: pn,
             width: 612.0,
             height: 792.0,
@@ -195,7 +195,7 @@ mod tests {
         for i in 1..12 {
             pages.push(body_page(i));
         }
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = FootnotesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }
@@ -215,7 +215,7 @@ mod tests {
             "TimesNewRoman",
         ));
         pages.push(footnote_page);
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = FootnotesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
@@ -235,7 +235,7 @@ mod tests {
             "Arial",
         ));
         pages.push(footnote_page);
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = FootnotesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
@@ -255,7 +255,7 @@ mod tests {
             "TimesNewRoman",
         ));
         pages.push(footnote_page);
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = FootnotesFontChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }

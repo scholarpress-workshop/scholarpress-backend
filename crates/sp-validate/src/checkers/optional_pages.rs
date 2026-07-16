@@ -1,5 +1,5 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 
 pub struct CopyrightPageFormatChecker;
@@ -57,19 +57,19 @@ impl Checker for CopyrightPageFormatChecker {
             });
         }
 
-        let non_empty: Vec<&crate::document::TextSpan> = page
+        let non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| !s.text.trim().is_empty())
             .collect();
 
-        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&sp_extract::document::TextSpan>> =
             std::collections::BTreeMap::new();
         for s in &non_empty {
             let top_key = s.bbox.0.round() as i32;
             line_groups.entry(top_key).or_default().push(s);
         }
-        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> =
+        let mut lines: Vec<(i32, Vec<&&sp_extract::document::TextSpan>)> =
             line_groups.into_iter().collect();
         lines.sort_by_key(|(top, _)| *top);
 
@@ -137,10 +137,10 @@ impl Checker for CopyrightPageFormatChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page};
 
-    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> crate::document::TextSpan {
-        crate::document::TextSpan {
+    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> sp_extract::document::TextSpan {
+        sp_extract::document::TextSpan {
             text: text.to_string(),
             font_name: "Times".to_string(),
             font_size: 12.0,
@@ -153,8 +153,8 @@ mod tests {
 
     #[test]
     fn test_no_copyright_page_pass() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -170,8 +170,8 @@ mod tests {
     #[test]
     fn test_copyright_page_centered_pass() {
         let center = 306.0;
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 3,
                 width: 612.0,
                 height: 792.0,
@@ -189,8 +189,8 @@ mod tests {
 
     #[test]
     fn test_copyright_page_offcenter_fail() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 3,
                 width: 612.0,
                 height: 792.0,

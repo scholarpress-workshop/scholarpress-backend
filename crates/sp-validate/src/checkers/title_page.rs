@@ -1,5 +1,5 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
 
 pub struct TitlePageAllCapsChecker;
@@ -26,7 +26,7 @@ impl Checker for TitlePageAllCapsChecker {
             }
         };
 
-        let non_empty_spans: Vec<&crate::document::TextSpan> = page
+        let non_empty_spans: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| !s.text.trim().is_empty())
@@ -46,7 +46,7 @@ impl Checker for TitlePageAllCapsChecker {
             .map(|s| s.bbox.0)
             .fold(f32::MAX, |a, b| a.min(b));
 
-        let title_spans: Vec<&&crate::document::TextSpan> = non_empty_spans
+        let title_spans: Vec<&&sp_extract::document::TextSpan> = non_empty_spans
             .iter()
             .filter(|s| (s.bbox.0 - min_top).abs() < 3.0)
             .collect();
@@ -156,7 +156,7 @@ impl Checker for TitlePageClauseCenteredChecker {
             }
         };
 
-        let non_empty: Vec<&crate::document::TextSpan> = page
+        let non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| !s.text.trim().is_empty())
@@ -171,14 +171,14 @@ impl Checker for TitlePageClauseCenteredChecker {
             };
         }
 
-        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&sp_extract::document::TextSpan>> =
             std::collections::BTreeMap::new();
         for s in &non_empty {
             let top_key = s.bbox.0.round() as i32;
             line_groups.entry(top_key).or_default().push(s);
         }
 
-        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> =
+        let mut lines: Vec<(i32, Vec<&&sp_extract::document::TextSpan>)> =
             line_groups.into_iter().collect();
         lines.sort_by_key(|(top, _)| *top);
 
@@ -344,19 +344,19 @@ impl Checker for TitlePageClauseSpacingChecker {
 
         let body_spacing = compute_body_line_spacing(doc).unwrap_or(24.0);
 
-        let non_empty: Vec<&crate::document::TextSpan> = page
+        let non_empty: Vec<&sp_extract::document::TextSpan> = page
             .spans
             .iter()
             .filter(|s| !s.text.trim().is_empty())
             .collect();
 
-        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&sp_extract::document::TextSpan>> =
             std::collections::BTreeMap::new();
         for s in &non_empty {
             let top_key = s.bbox.0.round() as i32;
             line_groups.entry(top_key).or_default().push(s);
         }
-        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> =
+        let mut lines: Vec<(i32, Vec<&&sp_extract::document::TextSpan>)> =
             line_groups.into_iter().collect();
         lines.sort_by_key(|(top, _)| *top);
 
@@ -467,14 +467,14 @@ impl Checker for TitlePageClauseSpacingChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page};
 
-    fn span(text: &str, top: f32) -> crate::document::TextSpan {
+    fn span(text: &str, top: f32) -> sp_extract::document::TextSpan {
         span_x(text, top, 100.0, 200.0)
     }
 
-    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> crate::document::TextSpan {
-        crate::document::TextSpan {
+    fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> sp_extract::document::TextSpan {
+        sp_extract::document::TextSpan {
             text: text.to_string(),
             font_name: "Times".to_string(),
             font_size: 12.0,
@@ -487,8 +487,8 @@ mod tests {
 
     #[test]
     fn test_title_all_caps_pass() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -503,8 +503,8 @@ mod tests {
 
     #[test]
     fn test_title_all_caps_fail() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -519,8 +519,8 @@ mod tests {
 
     #[test]
     fn test_title_all_caps_fail_mixed() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -535,8 +535,8 @@ mod tests {
 
     #[test]
     fn test_title_all_caps_no_alpha() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_title_empty_doc() {
-        let doc = Document { pages: vec![] };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
         let r = TitlePageAllCapsChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Error);
     }
@@ -559,8 +559,8 @@ mod tests {
     #[test]
     fn test_clause_centered_pass() {
         let center = 306.0; // 612/2 = page center
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -593,8 +593,8 @@ mod tests {
 
     #[test]
     fn test_clause_centered_fail_offcenter() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -614,8 +614,8 @@ mod tests {
 
     #[test]
     fn test_clause_centered_no_clause_found() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -634,8 +634,8 @@ mod tests {
     #[test]
     fn test_clause_centered_stops_at_committee() {
         let center = 306.0;
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -665,7 +665,7 @@ mod tests {
             let top = 72.0 + i as f32 * 24.0;
             spans.push(span_x("body text line here", top, 90.0, 522.0));
         }
-        Page {
+        Page { text: String::new(),
             page_number: page_num,
             width: 612.0,
             height: 792.0,
@@ -677,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_clause_spacing_pass() {
-        let title_page = Page {
+        let title_page = Page { text: String::new(),
             page_number: 1,
             width: 612.0,
             height: 792.0,
@@ -695,14 +695,14 @@ mod tests {
         for i in 2..12 {
             pages.push(body_page(i));
         }
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = TitlePageClauseSpacingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
 
     #[test]
     fn test_clause_spacing_fail() {
-        let title_page = Page {
+        let title_page = Page { text: String::new(),
             page_number: 1,
             width: 612.0,
             height: 792.0,
@@ -720,7 +720,7 @@ mod tests {
         for i in 2..12 {
             pages.push(body_page(i));
         }
-        let doc = Document { pages };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages };
         let r = TitlePageClauseSpacingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }

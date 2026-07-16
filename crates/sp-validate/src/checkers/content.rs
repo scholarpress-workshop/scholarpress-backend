@@ -1,5 +1,5 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use crate::document::Document;
+use sp_extract::document::ParsedDocument as Document;
 use regex::Regex;
 use serde_yaml::Value;
 use std::collections::BTreeMap;
@@ -22,8 +22,8 @@ static APPENDIX_RE: LazyLock<Regex> =
 static DASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[–—\-—]+").unwrap());
 static NONALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9\s\-:]").unwrap());
 
-fn page_lines(page: &crate::document::Page) -> Vec<String> {
-    let mut lines: BTreeMap<i32, Vec<&crate::document::TextSpan>> = BTreeMap::new();
+fn page_lines(page: &sp_extract::document::ParsedPage) -> Vec<String> {
+    let mut lines: BTreeMap<i32, Vec<&sp_extract::document::TextSpan>> = BTreeMap::new();
     for s in &page.spans {
         if !s.text.trim().is_empty() {
             let top_key = s.bbox.0.round() as i32;
@@ -193,7 +193,7 @@ impl Checker for BoilerplateMatchChecker {
     }
 }
 
-fn find_committee(page: &crate::document::Page) -> Vec<(String, bool)> {
+fn find_committee(page: &sp_extract::document::ParsedPage) -> Vec<(String, bool)> {
     let lines = page_lines(page);
     let mut committee: Vec<(String, bool)> = Vec::new();
     let mut in_committee = false;
@@ -328,8 +328,8 @@ impl Checker for CommitteeOrderChecker {
     }
 }
 
-fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
-    let mut lines: BTreeMap<i32, Vec<&crate::document::TextSpan>> = BTreeMap::new();
+fn extract_toc_entries(page: &sp_extract::document::ParsedPage) -> Vec<(String, usize)> {
+    let mut lines: BTreeMap<i32, Vec<&sp_extract::document::TextSpan>> = BTreeMap::new();
     for s in &page.spans {
         if !s.text.trim().is_empty() {
             let top_key = s.bbox.0.round() as i32;
@@ -363,8 +363,8 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
     entries
 }
 
-fn extract_page_heading(page: &crate::document::Page) -> String {
-    let mut body: Vec<&crate::document::TextSpan> = page
+fn extract_page_heading(page: &sp_extract::document::ParsedPage) -> String {
+    let mut body: Vec<&sp_extract::document::TextSpan> = page
         .spans
         .iter()
         .filter(|s| {
@@ -575,7 +575,7 @@ impl Checker for HumanReviewChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Document, Page, TextSpan};
+    use sp_extract::document::{ParsedDocument as Document, ParsedPage as Page, TextSpan};
 
     fn span(text: &str, top: f32, x0: f32) -> TextSpan {
         TextSpan {
@@ -591,8 +591,8 @@ mod tests {
 
     #[test]
     fn test_boilerplate_match_pass() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -616,8 +616,8 @@ mod tests {
 
     #[test]
     fn test_boilerplate_match_fail() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -634,14 +634,14 @@ mod tests {
 
     #[test]
     fn test_boilerplate_empty_template_pass() {
-        let doc = Document { pages: vec![] };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
         let r = BoilerplateMatchChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_human_review_manual() {
-        let doc = Document { pages: vec![] };
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
         let params: Value = serde_yaml::from_str("prompt: Check this\n").unwrap();
         let r = HumanReviewChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Manual);
@@ -682,8 +682,8 @@ mod tests {
 
     #[test]
     fn test_committee_chair_not_first() {
-        let doc = Document {
-            pages: vec![Page {
+        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+            pages: vec![Page { text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
