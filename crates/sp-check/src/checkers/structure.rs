@@ -1,7 +1,7 @@
 use crate::checkers::typography::normalize_family;
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
+use sp_extract::document::ParsedDocument as Document;
 use std::collections::{BTreeMap, HashMap};
 
 const SECTION_KEYWORDS: &[(&str, &str)] = &[
@@ -845,11 +845,22 @@ mod tests {
     }
 
     fn make_doc(pages: Vec<Vec<(&str, f32)>>) -> Document {
-        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: pages
                 .iter()
                 .enumerate()
-                .map(|(i, spans)| Page { text: String::new(),
+                .map(|(i, spans)| Page {
+                    text: String::new(),
                     page_number: i + 1,
                     width: 612.0,
                     height: 792.0,
@@ -907,8 +918,19 @@ mod tests {
 
     #[test]
     fn test_title_page_no_page_number_pass() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -923,8 +945,19 @@ mod tests {
 
     #[test]
     fn test_title_page_no_page_number_fail() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -939,9 +972,20 @@ mod tests {
 
     #[test]
     fn test_cv_no_page_number_pass() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: vec![
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 1,
                     width: 612.0,
                     height: 792.0,
@@ -949,7 +993,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 2,
                     width: 612.0,
                     height: 792.0,
@@ -975,8 +1020,19 @@ mod tests {
 
     #[test]
     fn test_hyperlinks_format_pass() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -1020,9 +1076,20 @@ mod tests {
 
     #[test]
     fn test_acceptance_page_arabic_number_fails() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: vec![
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 1,
                     width: 612.0,
                     height: 792.0,
@@ -1030,7 +1097,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 2,
                     width: 612.0,
                     height: 792.0,
@@ -1057,9 +1125,20 @@ mod tests {
 
     #[test]
     fn test_front_matter_arabic_page_number() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: vec![
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 1,
                     width: 612.0,
                     height: 792.0,
@@ -1067,7 +1146,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 2,
                     width: 612.0,
                     height: 792.0,
@@ -1086,7 +1166,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 3,
                     width: 612.0,
                     height: 792.0,
@@ -1102,9 +1183,20 @@ mod tests {
 
     #[test]
     fn test_headings_inconsistent_font() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: vec![
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 1,
                     width: 612.0,
                     height: 792.0,
@@ -1112,7 +1204,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 2,
                     width: 612.0,
                     height: 792.0,
@@ -1120,7 +1213,8 @@ mod tests {
                     images: vec![],
                     paths: vec![],
                 },
-                Page { text: String::new(),
+                Page {
+                    text: String::new(),
                     page_number: 3,
                     width: 612.0,
                     height: 792.0,

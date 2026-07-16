@@ -1,7 +1,7 @@
 use crate::checkers::{get_checker, CheckResult, Status};
 use crate::spec::InstitutionSpec;
-use std::path::Path;
 use sp_extract::document::ParsedDocument;
+use std::path::Path;
 
 #[derive(Default)]
 pub struct CheckOptions {

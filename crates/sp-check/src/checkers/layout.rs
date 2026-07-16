@@ -1,6 +1,6 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
+use sp_extract::document::ParsedDocument as Document;
 
 fn parse_measurement(value: &str) -> Result<f32, String> {
     let value = value.trim();
@@ -425,8 +425,19 @@ mod tests {
         for (i, &(_, _, _, _, text)) in extra.iter().enumerate() {
             spans[body_bboxes.len() + i].text = text.to_string();
         }
-        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
@@ -510,8 +521,19 @@ mod tests {
             (228.0, 240.0, 90.0, 522.0),
             (252.0, 264.0, 90.0, 522.0),
         ];
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
@@ -547,7 +569,19 @@ mod tests {
 
     #[test]
     fn test_margins_error_empty() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![],
+        };
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Error);
     }

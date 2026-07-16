@@ -38,19 +38,17 @@ pub async fn handler(
         .decode(&body.pdf_base64)
         .map_err(|e| AppError::Check(format!("Invalid base64: {}", e)))?;
 
-    let tmp_dir =
-        std::env::temp_dir().join(format!("scholarpress-check-{}", uuid::Uuid::new_v4()));
+    let tmp_dir = std::env::temp_dir().join(format!("scholarpress-check-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&tmp_dir)?;
     let pdf_path = tmp_dir.join("input.pdf");
     std::fs::write(&pdf_path, &pdf_bytes)?;
 
     let spec_path = tmp_dir.join("spec.yaml");
-    let spec_yaml = serde_yaml::to_string(&institution.spec)
-        .map_err(|e| AppError::Check(e.to_string()))?;
+    let spec_yaml =
+        serde_yaml::to_string(&institution.spec).map_err(|e| AppError::Check(e.to_string()))?;
     std::fs::write(&spec_path, &spec_yaml)?;
 
-    let spec = sp_check::spec::load_spec(&spec_path)
-        .map_err(|e| AppError::Check(e.to_string()))?;
+    let spec = sp_check::spec::load_spec(&spec_path).map_err(|e| AppError::Check(e.to_string()))?;
 
     let options = sp_check::engine::CheckOptions::default();
     let results = sp_check::engine::run_checks(&spec, &pdf_path, &options)

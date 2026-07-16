@@ -1,12 +1,7 @@
 use crate::error::AppError;
-use axum::{
-    extract::Multipart,
-    Json,
-};
+use axum::{extract::Multipart, Json};
 
-pub async fn handler(
-    mut multipart: Multipart,
-) -> Result<Json<serde_json::Value>, AppError> {
+pub async fn handler(mut multipart: Multipart) -> Result<Json<serde_json::Value>, AppError> {
     if let Some(field) = multipart
         .next_field()
         .await

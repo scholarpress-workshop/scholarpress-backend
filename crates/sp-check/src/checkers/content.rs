@@ -1,7 +1,7 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use sp_extract::document::ParsedDocument as Document;
 use regex::Regex;
 use serde_yaml::Value;
+use sp_extract::document::ParsedDocument as Document;
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
@@ -591,8 +591,19 @@ mod tests {
 
     #[test]
     fn test_boilerplate_match_pass() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -616,8 +627,19 @@ mod tests {
 
     #[test]
     fn test_boilerplate_match_fail() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
@@ -634,14 +656,38 @@ mod tests {
 
     #[test]
     fn test_boilerplate_empty_template_pass() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![],
+        };
         let r = BoilerplateMatchChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_human_review_manual() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![],
+        };
         let params: Value = serde_yaml::from_str("prompt: Check this\n").unwrap();
         let r = HumanReviewChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Manual);
@@ -682,8 +728,19 @@ mod tests {
 
     #[test]
     fn test_committee_chair_not_first() {
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,

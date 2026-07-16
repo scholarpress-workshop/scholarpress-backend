@@ -1,5 +1,5 @@
-use sp_extract::document::ParsedDocument;
 use serde::Serialize;
+use sp_extract::document::ParsedDocument;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 

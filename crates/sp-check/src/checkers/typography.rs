@@ -1,6 +1,6 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
+use sp_extract::document::ParsedDocument as Document;
 use std::collections::{HashMap, HashSet};
 
 fn parse_measurement(value: &str) -> Result<f32, String> {
@@ -97,7 +97,10 @@ fn is_non_body_text(span: &sp_extract::document::TextSpan) -> bool {
     false
 }
 
-fn is_near_image(page: &sp_extract::document::ParsedPage, span: &sp_extract::document::TextSpan) -> bool {
+fn is_near_image(
+    page: &sp_extract::document::ParsedPage,
+    span: &sp_extract::document::TextSpan,
+) -> bool {
     let (st, sb, sx0, sx1) = span.bbox;
     for &(it, ib, ix0, ix1) in &page.images {
         let overlap = sx0 < ix1 && sx1 > ix0 && st < ib && sb > it;
@@ -700,7 +703,8 @@ mod tests {
     }
 
     fn make_page(spans: Vec<TextSpan>) -> Page {
-        Page { text: String::new(),
+        Page {
+            text: String::new(),
             page_number: 1,
             width: 612.0,
             height: 792.0,
@@ -711,7 +715,17 @@ mod tests {
     }
 
     fn make_doc(spans: Vec<TextSpan>) -> Document {
-        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
+        Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
             pages: vec![make_page(spans)],
         }
     }
@@ -868,7 +882,19 @@ mod tests {
             false,
         )]);
         page.page_number = 5;
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![page] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![page],
+        };
         let r = FontWeightChecker.check(
             &doc,
             &serde_yaml::from_str("weight: normal\npage: 1\n").unwrap(),
@@ -940,7 +966,8 @@ mod tests {
 
     #[test]
     fn test_justification_skips_sparse_pages() {
-        let page = Page { text: String::new(),
+        let page = Page {
+            text: String::new(),
             page_number: 7,
             width: 612.0,
             height: 792.0,
@@ -955,7 +982,19 @@ mod tests {
             images: vec![],
             paths: vec![],
         };
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![page] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![page],
+        };
         let r =
             JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
@@ -963,7 +1002,8 @@ mod tests {
 
     #[test]
     fn test_justification_skips_early_pages() {
-        let mut page = Page { text: String::new(),
+        let mut page = Page {
+            text: String::new(),
             page_number: 3,
             width: 612.0,
             height: 792.0,
@@ -986,7 +1026,19 @@ mod tests {
                 false,
             ));
         }
-        let doc = Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] }, pages: vec![page] };
+        let doc = Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![page],
+        };
         let r =
             JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);

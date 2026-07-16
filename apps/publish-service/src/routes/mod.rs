@@ -1,9 +1,9 @@
+pub mod check;
 pub mod compile;
 pub mod extract;
 pub mod institutions;
 pub mod spec;
 pub mod template;
-pub mod check;
 
 use crate::institutions::Registry;
 use axum::{

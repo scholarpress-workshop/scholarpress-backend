@@ -1,6 +1,6 @@
 use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
-use sp_extract::document::ParsedDocument as Document;
 use serde_yaml::Value;
+use sp_extract::document::ParsedDocument as Document;
 use std::collections::BTreeMap;
 
 fn find_toc_page(doc: &Document) -> Option<&sp_extract::document::ParsedPage> {
@@ -341,8 +341,19 @@ mod tests {
     }
 
     fn make_toc_page(spans: Vec<sp_extract::document::TextSpan>) -> Document {
-        Document { raw_text: String::new(), paragraphs: vec![], headings: vec![], metadata: sp_extract::document::ParsedMetadata { title: None, author: None, page_count: 1, page_count_estimated: false, detected_fonts: vec![] },
-            pages: vec![Page { text: String::new(),
+        Document {
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages: vec![Page {
+                text: String::new(),
                 page_number: 5,
                 width: 612.0,
                 height: 792.0,
