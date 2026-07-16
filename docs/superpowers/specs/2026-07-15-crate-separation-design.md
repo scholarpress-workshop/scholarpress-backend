@@ -152,6 +152,16 @@ sp-typst (serde_json) — standalone, unchanged
 - No changes to institution specs or catalog data
 - No new checker implementations
 
+## Known limitation: PDF-centric intermediate model
+
+`ParsedDocument` and `ParsedPage` carry PDF-derived concepts (per-page spans
+with bboxes, images, paths, exact page dimensions). DOCX extraction populates
+a single synthetic page with empty span/image/path arrays and estimated
+dimensions — same as today. The intermediate representation works for all
+current consumers, but as more input formats are added, consider refactoring
+to a format-agnostic model (e.g., sections + paragraphs without page
+boundaries, with format-specific enrichment layers).
+
 ## Breaking changes
 
 - `POST /validate` → `POST /check` — route path rename. Clients calling the
