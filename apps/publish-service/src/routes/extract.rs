@@ -19,25 +19,24 @@ pub async fn handler(mut multipart: Multipart) -> Result<Json<serde_json::Value>
         let mime = content_type
             .as_deref()
             .unwrap_or("application/octet-stream");
-        let parsed =
-            match mime {
-                "application/pdf" => sp_extract::extract_pdf(&data)
-                    .map_err(|e| {
-                        tracing::error!(filename = %name, error = %e, "PDF extraction failed");
-                        AppError::Extraction(e.to_string())
-                    })?,
-                mt if mt.contains("wordprocessingml") => sp_extract::extract_docx(&data)
-                    .map_err(|e| {
-                        tracing::error!(filename = %name, error = %e, "DOCX extraction failed");
-                        AppError::Extraction(e.to_string())
-                    })?,
-                _ => {
-                    return Err(AppError::Extraction(format!(
-                        "Unsupported format: {}",
-                        mime
-                    )))
-                }
-            };
+        let parsed = match mime {
+            "application/pdf" => sp_extract::extract_pdf(&data).map_err(|e| {
+                tracing::error!(filename = %name, error = %e, "PDF extraction failed");
+                AppError::Extraction(e.to_string())
+            })?,
+            mt if mt.contains("wordprocessingml") => {
+                sp_extract::extract_docx(&data).map_err(|e| {
+                    tracing::error!(filename = %name, error = %e, "DOCX extraction failed");
+                    AppError::Extraction(e.to_string())
+                })?
+            }
+            _ => {
+                return Err(AppError::Extraction(format!(
+                    "Unsupported format: {}",
+                    mime
+                )))
+            }
+        };
 
         return Ok(Json(serde_json::to_value(parsed)?));
     }
