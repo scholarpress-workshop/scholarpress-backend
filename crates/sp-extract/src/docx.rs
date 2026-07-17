@@ -33,6 +33,15 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
     let doc_tree = roxmltree::Document::parse(&doc_xml)?;
     let paragraphs = parse_paragraphs(doc_tree.root(), &style_map);
 
+    tracing::info!(para_count = paragraphs.len(), "parsed docx paragraphs");
+    if let Some(first) = paragraphs.first() {
+        tracing::info!(first_text = %first.text.chars().take(80).collect::<String>());
+    }
+
+    if paragraphs.is_empty() {
+        return Err("No text found in document. The file may be empty or use an unsupported XML namespace.".into());
+    }
+
     let word_count: usize = paragraphs
         .iter()
         .map(|p| p.text.split_whitespace().count())
