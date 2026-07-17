@@ -148,7 +148,13 @@ fn parse_paragraphs(
     let root_children: Vec<String> = root
         .children()
         .filter(|n| n.is_element())
-        .map(|n| format!("{{{}}}:{}", n.tag_name().namespace().unwrap_or(""), n.tag_name().name()))
+        .map(|n| {
+            format!(
+                "{{{}}}:{}",
+                n.tag_name().namespace().unwrap_or(""),
+                n.tag_name().name()
+            )
+        })
         .collect();
     tracing::info!(?root_children, "root children");
 
@@ -255,7 +261,11 @@ fn parse_paragraphs(
         }
     }
 
-    tracing::info!(p_count, para_count = paragraphs.len(), "docx parse complete");
+    tracing::info!(
+        p_count,
+        para_count = paragraphs.len(),
+        "docx parse complete"
+    );
     paragraphs
 }
 
