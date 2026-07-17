@@ -39,7 +39,10 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
     }
 
     if paragraphs.is_empty() {
-        return Err("No text found in document. The file may be empty or use an unsupported XML namespace.".into());
+        return Err(
+            "No text found in document. The file may be empty or use an unsupported XML namespace."
+                .into(),
+        );
     }
 
     let word_count: usize = paragraphs
