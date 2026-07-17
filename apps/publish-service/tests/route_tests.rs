@@ -202,6 +202,64 @@ async fn test_extract_no_file_returns_error() {
 }
 
 #[tokio::test]
+async fn test_extract_pdf_response_shape() {
+    let (app, _tmp) = test_app();
+    let pdf_bytes = include_bytes!("../../../crates/sp-extract/tests/fixtures/minimal.pdf");
+
+    let boundary = "testboundary";
+    let mut body = Vec::new();
+    body.extend_from_slice(b"--testboundary\r\n");
+    body.extend_from_slice(
+        b"Content-Disposition: form-data; name=\"file\"; filename=\"test.pdf\"\r\n",
+    );
+    body.extend_from_slice(b"Content-Type: application/pdf\r\n\r\n");
+    body.extend_from_slice(pdf_bytes);
+    body.extend_from_slice(b"\r\n--testboundary--\r\n");
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/extract")
+                .header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={}", boundary),
+                )
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let resp_body = axum::body::to_bytes(response.into_body(), 10_000)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&resp_body).unwrap();
+
+    assert!(json.get("raw_text").is_some(), "missing raw_text field");
+    assert!(json.get("pages").is_some(), "missing pages field");
+    assert!(json.get("paragraphs").is_some(), "missing paragraphs field");
+    assert!(json.get("headings").is_some(), "missing headings field");
+    assert!(json.get("metadata").is_some(), "missing metadata field");
+
+    let metadata = &json["metadata"];
+    assert!(
+        metadata.get("page_count").is_some(),
+        "metadata missing page_count"
+    );
+    assert!(
+        metadata.get("detected_fonts").is_some(),
+        "metadata missing detected_fonts"
+    );
+
+    assert!(
+        !json["raw_text"].as_str().unwrap().is_empty(),
+        "raw_text should not be empty"
+    );
+}
+
+#[tokio::test]
 async fn test_validate_invalid_base64() {
     let (app, _tmp) = test_app();
     let body = serde_json::json!({
