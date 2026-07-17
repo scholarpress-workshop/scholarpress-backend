@@ -143,13 +143,26 @@ fn parse_paragraphs(
     let ns = resolve_ns(root);
     let w_ns = ns.get("w").cloned().unwrap_or_default();
 
+    tracing::info!(root_tag = %root.tag_name().name(), root_ns = ?root.tag_name().namespace(), w_ns = %w_ns, "docx root");
+
+    let root_children: Vec<String> = root
+        .children()
+        .filter(|n| n.is_element())
+        .map(|n| format!("{{{}}}:{}", n.tag_name().namespace().unwrap_or(""), n.tag_name().name()))
+        .collect();
+    tracing::info!(?root_children, "root children");
+
     let body = find_child(&root, &w_ns, "body");
+    tracing::info!(body_found = body.is_some(), "docx body");
+
     let container = body.as_ref().unwrap_or(&root);
 
+    let mut p_count = 0;
     for p_node in container
         .descendants()
         .filter(|n| n.has_tag_name((w_ns.as_str(), "p")))
     {
+        p_count += 1;
         let mut text = String::new();
         let mut bold = false;
         let mut italic = false;
@@ -242,6 +255,7 @@ fn parse_paragraphs(
         }
     }
 
+    tracing::info!(p_count, para_count = paragraphs.len(), "docx parse complete");
     paragraphs
 }
 
