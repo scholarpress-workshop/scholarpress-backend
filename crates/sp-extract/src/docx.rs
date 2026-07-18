@@ -140,28 +140,12 @@ fn parse_paragraphs(
     style_map: &std::collections::HashMap<String, StyleInfo>,
 ) -> Vec<ParsedParagraph> {
     let mut paragraphs = Vec::new();
+    let root_elem = root.children().find(|n| n.is_element()).unwrap_or(root);
     let ns = resolve_ns(root);
     let w_ns = ns.get("w").cloned().unwrap_or_default();
 
-    tracing::info!(root_tag = %root.tag_name().name(), root_ns = ?root.tag_name().namespace(), w_ns = %w_ns, "docx root");
-
-    let root_children: Vec<String> = root
-        .children()
-        .filter(|n| n.is_element())
-        .map(|n| {
-            format!(
-                "{{{}}}:{}",
-                n.tag_name().namespace().unwrap_or(""),
-                n.tag_name().name()
-            )
-        })
-        .collect();
-    tracing::info!(?root_children, "root children");
-
-    let body = find_child(&root, &w_ns, "body");
-    tracing::info!(body_found = body.is_some(), "docx body");
-
-    let container = body.as_ref().unwrap_or(&root);
+    let body = find_child(&root_elem, &w_ns, "body");
+    let container = body.as_ref().unwrap_or(&root_elem);
 
     let mut p_count = 0;
     for p_node in container
@@ -270,8 +254,9 @@ fn parse_paragraphs(
 }
 
 fn resolve_ns(root: Node) -> std::collections::HashMap<String, String> {
+    let elem = root.children().find(|n| n.is_element()).unwrap_or(root);
     let mut ns = std::collections::HashMap::new();
-    for n in root.namespaces() {
+    for n in elem.namespaces() {
         if n.uri() == "http://schemas.openxmlformats.org/wordprocessingml/2006/main" {
             ns.insert("w".to_string(), n.uri().to_string());
         }
@@ -293,5 +278,20 @@ mod tests {
     fn test_extract_docx_invalid() {
         let result = extract_docx(b"not a zip file");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_truncated_docx() {
+        let bytes =
+            std::fs::read("/home/danriggi/TRUNCATED - Hall dissertation 2026.docx").unwrap();
+        let doc = extract_docx(&bytes).expect("extract should succeed");
+        println!("raw_text length: {}", doc.raw_text.len());
+        println!("paragraphs: {}", doc.paragraphs.len());
+        println!(
+            "headings: {:?}",
+            doc.headings.iter().map(|h| &h.text).collect::<Vec<_>>()
+        );
+        assert!(!doc.raw_text.is_empty(), "raw_text should not be empty");
+        assert!(!doc.paragraphs.is_empty(), "paragraphs should not be empty");
     }
 }
