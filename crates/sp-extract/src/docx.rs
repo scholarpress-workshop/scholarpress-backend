@@ -279,19 +279,4 @@ mod tests {
         let result = extract_docx(b"not a zip file");
         assert!(result.is_err());
     }
-
-    #[test]
-    fn test_extract_truncated_docx() {
-        let bytes =
-            std::fs::read("/home/danriggi/TRUNCATED - Hall dissertation 2026.docx").unwrap();
-        let doc = extract_docx(&bytes).expect("extract should succeed");
-        println!("raw_text length: {}", doc.raw_text.len());
-        println!("paragraphs: {}", doc.paragraphs.len());
-        println!(
-            "headings: {:?}",
-            doc.headings.iter().map(|h| &h.text).collect::<Vec<_>>()
-        );
-        assert!(!doc.raw_text.is_empty(), "raw_text should not be empty");
-        assert!(!doc.paragraphs.is_empty(), "paragraphs should not be empty");
-    }
 }
