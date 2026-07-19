@@ -954,6 +954,7 @@ mod tests {
             ],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -981,6 +982,7 @@ mod tests {
             ],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1024,6 +1026,7 @@ mod tests {
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1061,6 +1064,7 @@ mod tests {
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1103,6 +1107,7 @@ mod tests {
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1147,6 +1152,7 @@ mod tests {
             paths: vec![],
         });
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1176,6 +1182,7 @@ mod tests {
             paths: vec![],
         });
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1216,6 +1223,7 @@ mod tests {
             paths: vec![],
         });
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1267,6 +1275,7 @@ mod tests {
             vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
         ));
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

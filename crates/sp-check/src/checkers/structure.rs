@@ -846,6 +846,7 @@ mod tests {
 
     fn make_doc(pages: Vec<Vec<(&str, f32)>>) -> Document {
         Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -919,6 +920,7 @@ mod tests {
     #[test]
     fn test_title_page_no_page_number_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -946,6 +948,7 @@ mod tests {
     #[test]
     fn test_title_page_no_page_number_fail() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -973,6 +976,7 @@ mod tests {
     #[test]
     fn test_cv_no_page_number_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1021,6 +1025,7 @@ mod tests {
     #[test]
     fn test_hyperlinks_format_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1077,6 +1082,7 @@ mod tests {
     #[test]
     fn test_acceptance_page_arabic_number_fails() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1126,6 +1132,7 @@ mod tests {
     #[test]
     fn test_front_matter_arabic_page_number() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1184,6 +1191,7 @@ mod tests {
     #[test]
     fn test_headings_inconsistent_font() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

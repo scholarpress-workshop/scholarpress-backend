@@ -156,6 +156,7 @@ mod tests {
     #[test]
     fn test_no_copyright_page_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -184,6 +185,7 @@ mod tests {
     fn test_copyright_page_centered_pass() {
         let center = 306.0;
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -214,6 +216,7 @@ mod tests {
     #[test]
     fn test_copyright_page_offcenter_fail() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

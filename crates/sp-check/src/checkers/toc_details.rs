@@ -342,6 +342,7 @@ mod tests {
 
     fn make_toc_page(spans: Vec<sp_extract::document::TextSpan>) -> Document {
         Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

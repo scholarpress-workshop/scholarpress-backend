@@ -592,6 +592,7 @@ mod tests {
     #[test]
     fn test_boilerplate_match_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -628,6 +629,7 @@ mod tests {
     #[test]
     fn test_boilerplate_match_fail() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -657,6 +659,7 @@ mod tests {
     #[test]
     fn test_boilerplate_empty_template_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -676,6 +679,7 @@ mod tests {
     #[test]
     fn test_human_review_manual() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -729,6 +733,7 @@ mod tests {
     #[test]
     fn test_committee_chair_not_first() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

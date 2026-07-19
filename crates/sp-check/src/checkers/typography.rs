@@ -716,6 +716,7 @@ mod tests {
 
     fn make_doc(spans: Vec<TextSpan>) -> Document {
         Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -883,6 +884,7 @@ mod tests {
         )]);
         page.page_number = 5;
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -983,6 +985,7 @@ mod tests {
             paths: vec![],
         };
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -1027,6 +1030,7 @@ mod tests {
             ));
         }
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

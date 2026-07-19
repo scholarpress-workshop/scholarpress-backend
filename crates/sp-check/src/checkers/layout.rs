@@ -426,6 +426,7 @@ mod tests {
             spans[body_bboxes.len() + i].text = text.to_string();
         }
         Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -522,6 +523,7 @@ mod tests {
             (252.0, 264.0, 90.0, 522.0),
         ];
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -570,6 +572,7 @@ mod tests {
     #[test]
     fn test_margins_error_empty() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

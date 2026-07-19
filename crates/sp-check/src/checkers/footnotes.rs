@@ -202,6 +202,7 @@ mod tests {
             pages.push(body_page(i));
         }
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -234,6 +235,7 @@ mod tests {
         ));
         pages.push(footnote_page);
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -266,6 +268,7 @@ mod tests {
         ));
         pages.push(footnote_page);
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -298,6 +301,7 @@ mod tests {
         ));
         pages.push(footnote_page);
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],

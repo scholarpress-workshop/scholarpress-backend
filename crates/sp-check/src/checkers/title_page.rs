@@ -492,6 +492,7 @@ mod tests {
     #[test]
     fn test_title_all_caps_pass() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -519,6 +520,7 @@ mod tests {
     #[test]
     fn test_title_all_caps_fail() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -546,6 +548,7 @@ mod tests {
     #[test]
     fn test_title_all_caps_fail_mixed() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -573,6 +576,7 @@ mod tests {
     #[test]
     fn test_title_all_caps_no_alpha() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -600,6 +604,7 @@ mod tests {
     #[test]
     fn test_title_empty_doc() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -620,6 +625,7 @@ mod tests {
     fn test_clause_centered_pass() {
         let center = 306.0; // 612/2 = page center
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -665,6 +671,7 @@ mod tests {
     #[test]
     fn test_clause_centered_fail_offcenter() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -697,6 +704,7 @@ mod tests {
     #[test]
     fn test_clause_centered_no_clause_found() {
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -728,6 +736,7 @@ mod tests {
     fn test_clause_centered_stops_at_committee() {
         let center = 306.0;
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -802,6 +811,7 @@ mod tests {
             pages.push(body_page(i));
         }
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
@@ -840,6 +850,7 @@ mod tests {
             pages.push(body_page(i));
         }
         let doc = Document {
+            markdown_text: None,
             raw_text: String::new(),
             paragraphs: vec![],
             headings: vec![],
