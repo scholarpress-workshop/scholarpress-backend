@@ -64,6 +64,23 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
         .collect::<Vec<_>>()
         .join("\n\n");
 
+    let markdown_text = {
+        let options = anytomd::ConversionOptions::default();
+        match anytomd::convert_bytes(bytes, "docx", &options) {
+            Ok(result) => {
+                if result.markdown.is_empty() {
+                    None
+                } else {
+                    Some(result.markdown)
+                }
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "anytomd conversion failed");
+                None
+            }
+        }
+    };
+
     Ok(ParsedDocument {
         raw_text: raw_text.clone(),
         pages: vec![ParsedPage {
@@ -77,6 +94,7 @@ pub fn extract_docx(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::
         }],
         paragraphs,
         headings: Vec::new(),
+        markdown_text,
         metadata: ParsedMetadata {
             title: None,
             author: None,

@@ -63,5 +63,6 @@ pub struct ParsedDocument {
     pub pages: Vec<ParsedPage>,
     pub paragraphs: Vec<ParsedParagraph>,
     pub headings: Vec<Heading>,
+    pub markdown_text: Option<String>,
     pub metadata: ParsedMetadata,
 }

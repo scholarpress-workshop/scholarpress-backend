@@ -82,6 +82,7 @@ pub fn extract_pdf(bytes: &[u8]) -> Result<ParsedDocument, Box<dyn std::error::E
         pages,
         paragraphs: all_paragraphs,
         headings: Vec::new(),
+        markdown_text: None,
         metadata: ParsedMetadata {
             title: None,
             author: None,

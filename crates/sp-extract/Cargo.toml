@@ -11,3 +11,4 @@ roxmltree = "0.21"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
+anytomd = "1"
