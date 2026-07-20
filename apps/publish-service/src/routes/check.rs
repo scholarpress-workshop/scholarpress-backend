@@ -23,7 +23,14 @@ pub struct CheckViolation {
     pub check_id: String,
     pub status: String,
     pub detail: String,
-    pub page: Option<i32>,
+    pub evidence: Vec<EvidenceItem>,
+}
+
+#[derive(Serialize)]
+pub struct EvidenceItem {
+    pub page: usize,
+    pub bbox: Option<(f32, f32, f32, f32)>,
+    pub excerpt: Option<String>,
 }
 
 pub async fn handler(
@@ -59,14 +66,19 @@ pub async fn handler(
     let violations: Vec<CheckViolation> = report
         .results
         .iter()
-        .map(|r| {
-            let page = r.evidence.first().map(|e| e.page as i32);
-            CheckViolation {
-                check_id: r.check_id.clone(),
-                status: format!("{:?}", r.status),
-                detail: r.detail.clone(),
-                page,
-            }
+        .map(|r| CheckViolation {
+            check_id: r.check_id.clone(),
+            status: format!("{:?}", r.status),
+            detail: r.detail.clone(),
+            evidence: r
+                .evidence
+                .iter()
+                .map(|e| EvidenceItem {
+                    page: e.page,
+                    bbox: e.bbox,
+                    excerpt: e.excerpt.clone(),
+                })
+                .collect(),
         })
         .collect();
 
