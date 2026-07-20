@@ -9,7 +9,7 @@ pub struct Summary {
     pub error: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Report {
     pub results: Vec<CheckResult>,
     pub summary: Summary,
