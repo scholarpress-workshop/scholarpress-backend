@@ -198,6 +198,50 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), SpMcpError> {
     Ok(())
 }
 
+use sp_typst as typst;
+
+pub fn compile_typst(
+    config: &Config,
+    workspace: &Path,
+    entry_path: &Path,
+    data: Option<&serde_json::Value>,
+    out_name: Option<&str>,
+) -> Result<PathBuf, SpMcpError> {
+    if !workspace.is_dir() {
+        return Err(SpMcpError::WorkspaceNotFound(
+            workspace.display().to_string(),
+            config.workspace_root.clone(),
+        ));
+    }
+    let entry_abs = workspace.join(entry_path);
+    if !entry_abs.is_file() {
+        return Err(SpMcpError::Compilation(format!(
+            "entry file not found: {}",
+            entry_abs.display()
+        )));
+    }
+    if let Some(d) = data {
+        std::fs::write(workspace.join("data.json"), serde_json::to_string(d)?)?;
+    }
+
+    let source = std::fs::read_to_string(&entry_abs)?;
+    // sp-typst compiles the entry file from --root=workspace.
+    let bytes = typst::compile(&source, Some(workspace)).map_err(|e| {
+        SpMcpError::Compilation(format!("typst compile failed: {}", e))
+    })?;
+
+    let stem = entry_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "out".to_string());
+    let name = out_name.map(String::from).unwrap_or_else(|| format!("{}.pdf", stem));
+
+    std::fs::create_dir_all(workspace.join("out"))?;
+    let out_path = workspace.join("out").join(&name);
+    std::fs::write(&out_path, bytes)?;
+    Ok(out_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,6 +368,33 @@ mod tests {
                 assert_eq!(avail, vec!["institutions/iu".to_string()]);
             }
             other => panic!("expected ProfileNotFound, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn compile_typst_produces_pdf_or_skips_if_no_typst_binary() {
+        let ws = local_tempdir();
+        let tmpl = ws.join("template.typ");
+        fs::write(&tmpl, "= Hello, world!\n").unwrap();
+        let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
+
+        let result = compile_typst(
+            &cfg,
+            &ws,
+            Path::new("template.typ"),
+            None,
+            None,
+        );
+        match result {
+            Ok(p) => {
+                assert!(p.is_file(), "pdf should exist");
+                let bytes = fs::read(&p).unwrap();
+                assert!(bytes.starts_with(b"%PDF"), "should be a valid PDF");
+            }
+            Err(SpMcpError::Compilation(msg)) if msg.contains("typst") => {
+                eprintln!("SKIP: typst not on PATH ({})", msg);
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 

@@ -5,6 +5,9 @@ pub enum SpMcpError {
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("json error: {0}")]
+    Json(#[from] serde_json::Error),
+
     #[error("profile {0:?} not found in catalog; available: {1:?}")]
     ProfileNotFound(String, Vec<String>),
 
