@@ -3,3 +3,4 @@ target/
 *.tmp-*
 .tmp-*
 .DS_Store
+.worktrees/
