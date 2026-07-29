@@ -200,7 +200,6 @@ pub fn compile_typst(
     config: &Config,
     workspace: &Path,
     entry_path: &Path,
-    data: Option<&serde_json::Value>,
     out_name: Option<&str>,
 ) -> Result<PathBuf, SpMcpError> {
     if !workspace.is_dir() {
@@ -215,9 +214,6 @@ pub fn compile_typst(
             "entry file not found: {}",
             entry_abs.display()
         )));
-    }
-    if let Some(d) = data {
-        std::fs::write(workspace.join("data.json"), serde_json::to_string(d)?)?;
     }
 
     let source = std::fs::read_to_string(&entry_abs)?;
@@ -466,7 +462,7 @@ mod tests {
         fs::write(&tmpl, "= Hello, world!\n").unwrap();
         let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
 
-        let result = compile_typst(&cfg, &ws, Path::new("template.typ"), None, None);
+        let result = compile_typst(&cfg, &ws, Path::new("template.typ"), None);
         match result {
             Ok(p) => {
                 assert!(p.is_file(), "pdf should exist");

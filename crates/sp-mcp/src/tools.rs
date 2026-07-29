@@ -27,7 +27,6 @@ pub struct CreateWorkspaceParams {
 pub struct CompileTypstParams {
     pub workspace: PathBuf,
     pub entry_path: PathBuf,
-    pub data: Option<serde_json::Value>,
     pub out_name: Option<String>,
 }
 
@@ -91,7 +90,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Compile a Typst entry file within a workspace. Optionally pass `data` (JSON object) which is written to <workspace>/data.json before compilation. The PDF is written to <workspace>/out/<out_name>.pdf (default = entry stem). Returns the absolute output path. Requires the `typst` binary on PATH."
+        description = "Compile a Typst entry file within a workspace. Writes the PDF to <workspace>/out/<out_name>.pdf (default = entry stem). Returns the absolute output path. Requires the `typst` binary on PATH. To pass structured data, write <workspace>/data.json with the agent's file tools before calling — the typst template can read it with `json(\"data.json\")` or `read(\"data.json\")`."
     )]
     async fn compile_typst(
         &self,
@@ -102,7 +101,6 @@ impl ScholarPressService {
             &self.config,
             &p.workspace,
             &p.entry_path,
-            p.data.as_ref(),
             p.out_name.as_deref(),
         )
         .map_err(Self::err)?;
