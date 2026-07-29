@@ -57,6 +57,72 @@ fn read_profile_id_from_spec(spec_path: &Path) -> Option<String> {
     None
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileInfo {
+    pub id: String,
+    pub scope: String,
+    pub name: String,
+}
+
+pub fn list_profiles(config: &Config) -> Result<Vec<ProfileInfo>, SpMcpError> {
+    if !config.catalog_path.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    for scope_entry in std::fs::read_dir(&config.catalog_path)? {
+        let scope_entry = scope_entry?;
+        let scope_path = scope_entry.path();
+        if !scope_path.is_dir() {
+            continue;
+        }
+        let scope = match scope_entry.file_name().into_string() {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        for id_entry in std::fs::read_dir(&scope_path)? {
+            let id_entry = id_entry?;
+            let id_path = id_entry.path();
+            if !id_path.is_dir() {
+                continue;
+            }
+            if !id_path.join("spec.yaml").is_file() {
+                continue;
+            }
+            if !id_path.join("template").join("template.typ").is_file() {
+                continue;
+            }
+            let id = match id_entry.file_name().into_string() {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            let name = read_profile_name(&id_path.join("spec.yaml"))
+                .unwrap_or_else(|| id.clone());
+            out.push(ProfileInfo {
+                id: format!("{}/{}", scope, id),
+                scope: scope.clone(),
+                name,
+            });
+        }
+    }
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(out)
+}
+
+fn read_profile_name(spec_path: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(spec_path).ok()?;
+    for line in text.lines() {
+        for key in &["institution:", "server:", "journal:", "grant:"] {
+            if let Some(rest) = line.strip_prefix(key) {
+                let v = rest.trim().trim_matches('"').to_string();
+                if !v.is_empty() {
+                    return Some(v);
+                }
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,6 +165,34 @@ mod tests {
         let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/nonexistent-xyz-12345"));
         let result = list_workspaces(&cfg).unwrap();
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn list_profiles_finds_scoped_profiles() {
+        let catalog = local_tempdir();
+        let iu = catalog.join("institutions").join("iu");
+        fs::create_dir_all(iu.join("template")).unwrap();
+        fs::write(iu.join("spec.yaml"), "institution: Indiana University\n").unwrap();
+        fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
+
+        let arxiv = catalog.join("servers").join("arxiv");
+        fs::create_dir_all(arxiv.join("template")).unwrap();
+        fs::write(arxiv.join("spec.yaml"), "server: arxiv\n").unwrap();
+        fs::write(arxiv.join("template").join("template.typ"), "= Hi\n").unwrap();
+
+        // incomplete profile: missing template.typ — should be skipped
+        let incomplete = catalog.join("institutions").join("partial");
+        fs::create_dir_all(&incomplete).unwrap();
+        fs::write(incomplete.join("spec.yaml"), "institution: Partial\n").unwrap();
+
+        let cfg = Config::new(catalog.clone(), PathBuf::from("/w"));
+        let profiles = list_profiles(&cfg).unwrap();
+        let ids: Vec<&str> = profiles.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, vec!["institutions/iu", "servers/arxiv"]);
+
+        let iu_info = profiles.iter().find(|p| p.id == "institutions/iu").unwrap();
+        assert_eq!(iu_info.scope, "institutions");
+        assert_eq!(iu_info.name, "Indiana University");
     }
 
     fn local_tempdir() -> PathBuf {
