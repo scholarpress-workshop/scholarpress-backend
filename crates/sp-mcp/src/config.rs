@@ -24,7 +24,10 @@ impl Config {
         let catalog_path = PathBuf::from(catalog_path);
 
         if !catalog_path.is_dir() {
-            return Err(ConfigError::NotADirectory("SCHOLARPRESS_CATALOG_PATH", catalog_path));
+            return Err(ConfigError::NotADirectory(
+                "SCHOLARPRESS_CATALOG_PATH",
+                catalog_path,
+            ));
         }
         if let Some(parent) = workspace_root.parent() {
             if !parent.is_dir() && !parent.as_os_str().is_empty() {

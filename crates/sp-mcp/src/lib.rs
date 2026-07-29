@@ -6,7 +6,7 @@ pub mod workspace;
 use crate::config::Config;
 use crate::tools::ScholarPressService;
 use anyhow::Result;
-use rmcp::{ServiceExt, transport::stdio};
+use rmcp::{transport::stdio, ServiceExt};
 
 pub async fn run(config: Config) -> Result<()> {
     let service = ScholarPressService::new(config).serve(stdio()).await?;

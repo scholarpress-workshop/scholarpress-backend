@@ -37,7 +37,7 @@ pub fn list_workspaces(config: &Config) -> Result<Vec<WorkspaceInfo>, SpMcpError
             mtime,
         });
     }
-    out.sort_by(|a, b| b.mtime.cmp(&a.mtime));
+    out.sort_by_key(|w| std::cmp::Reverse(w.mtime));
     Ok(out)
 }
 
@@ -95,8 +95,7 @@ pub fn list_profiles(config: &Config) -> Result<Vec<ProfileInfo>, SpMcpError> {
                 Ok(s) => s,
                 Err(_) => continue,
             };
-            let name = read_profile_name(&id_path.join("spec.yaml"))
-                .unwrap_or_else(|| id.clone());
+            let name = read_profile_name(&id_path.join("spec.yaml")).unwrap_or_else(|| id.clone());
             out.push(ProfileInfo {
                 id: format!("{}/{}", scope, id),
                 scope: scope.clone(),
@@ -132,10 +131,7 @@ pub fn create_workspace(
 
     let profile_dir = config.catalog_path.join(profile_id);
     if !profile_dir.is_dir() {
-        let available: Vec<String> = list_profiles(config)?
-            .into_iter()
-            .map(|p| p.id)
-            .collect();
+        let available: Vec<String> = list_profiles(config)?.into_iter().map(|p| p.id).collect();
         return Err(SpMcpError::ProfileNotFound(
             profile_id.to_string(),
             available,
@@ -226,15 +222,16 @@ pub fn compile_typst(
 
     let source = std::fs::read_to_string(&entry_abs)?;
     // sp-typst compiles the entry file from --root=workspace.
-    let bytes = typst::compile(&source, Some(workspace)).map_err(|e| {
-        SpMcpError::Compilation(format!("typst compile failed: {}", e))
-    })?;
+    let bytes = typst::compile(&source, Some(workspace))
+        .map_err(|e| SpMcpError::Compilation(format!("typst compile failed: {}", e)))?;
 
     let stem = entry_path
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "out".to_string());
-    let name = out_name.map(String::from).unwrap_or_else(|| format!("{}.pdf", stem));
+    let name = out_name
+        .map(String::from)
+        .unwrap_or_else(|| format!("{}.pdf", stem));
 
     std::fs::create_dir_all(workspace.join("out"))?;
     let out_path = workspace.join("out").join(&name);
@@ -247,7 +244,7 @@ use sp_check as check;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckOutcome {
     pub id: String,
-    pub status: String,    // "PASS" | "FAIL" | "MANUAL" | "ERROR"
+    pub status: String, // "PASS" | "FAIL" | "MANUAL" | "ERROR"
     pub message: String,
     pub page: Option<usize>,
 }
@@ -424,7 +421,11 @@ mod tests {
         assert!(path.is_dir());
         assert!(path.join("spec.yaml").is_file());
         assert!(path.join("template").join("template.typ").is_file());
-        assert!(path.join("template").join("sections").join("ch.typ").is_file());
+        assert!(path
+            .join("template")
+            .join("sections")
+            .join("ch.typ")
+            .is_file());
         assert!(path.join("data").is_dir());
         assert!(path.join("out").is_dir());
         // tests/ skipped
@@ -465,13 +466,7 @@ mod tests {
         fs::write(&tmpl, "= Hello, world!\n").unwrap();
         let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
 
-        let result = compile_typst(
-            &cfg,
-            &ws,
-            Path::new("template.typ"),
-            None,
-            None,
-        );
+        let result = compile_typst(&cfg, &ws, Path::new("template.typ"), None, None);
         match result {
             Ok(p) => {
                 assert!(p.is_file(), "pdf should exist");
@@ -503,7 +498,10 @@ mod tests {
         let catalog = match catalog {
             Some(p) => p,
             None => {
-                eprintln!("SKIP: scholarpress-catalog not found near {}", manifest_dir.display());
+                eprintln!(
+                    "SKIP: scholarpress-catalog not found near {}",
+                    manifest_dir.display()
+                );
                 return;
             }
         };

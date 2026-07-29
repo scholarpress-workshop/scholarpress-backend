@@ -55,7 +55,9 @@ impl ScholarPressService {
         McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None)
     }
 
-    #[tool(description = "List existing workspaces under SCHOLARPRESS_WORKSPACE_ROOT. Returns name, absolute path, profile_id (if spec.yaml identifies one), and mtime.")]
+    #[tool(
+        description = "List existing workspaces under SCHOLARPRESS_WORKSPACE_ROOT. Returns name, absolute path, profile_id (if spec.yaml identifies one), and mtime."
+    )]
     async fn list_workspaces(&self) -> Result<CallToolResult, McpError> {
         let list = workspace::list_workspaces(&self.config).map_err(Self::err)?;
         let json = serde_json::to_string(&list)
@@ -63,7 +65,9 @@ impl ScholarPressService {
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
-    #[tool(description = "List available profiles in the catalog. Returns id (e.g. 'institutions/iu'), scope, and human-readable name.")]
+    #[tool(
+        description = "List available profiles in the catalog. Returns id (e.g. 'institutions/iu'), scope, and human-readable name."
+    )]
     async fn list_profiles(&self) -> Result<CallToolResult, McpError> {
         let list = workspace::list_profiles(&self.config).map_err(Self::err)?;
         let json = serde_json::to_string(&list)
@@ -71,7 +75,9 @@ impl ScholarPressService {
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
-    #[tool(description = "Create a new workspace by copying a catalog profile (spec.yaml + template/) into a named dir under the workspace root. Returns the absolute path.")]
+    #[tool(
+        description = "Create a new workspace by copying a catalog profile (spec.yaml + template/) into a named dir under the workspace root. Returns the absolute path."
+    )]
     async fn create_workspace(
         &self,
         params: Parameters<CreateWorkspaceParams>,
@@ -84,7 +90,9 @@ impl ScholarPressService {
         )]))
     }
 
-    #[tool(description = "Compile a Typst entry file within a workspace. Optionally pass `data` (JSON object) which is written to <workspace>/data.json before compilation. The PDF is written to <workspace>/out/<out_name>.pdf (default = entry stem). Returns the absolute output path. Requires the `typst` binary on PATH.")]
+    #[tool(
+        description = "Compile a Typst entry file within a workspace. Optionally pass `data` (JSON object) which is written to <workspace>/data.json before compilation. The PDF is written to <workspace>/out/<out_name>.pdf (default = entry stem). Returns the absolute output path. Requires the `typst` binary on PATH."
+    )]
     async fn compile_typst(
         &self,
         params: Parameters<CompileTypstParams>,
@@ -103,17 +111,24 @@ impl ScholarPressService {
         )]))
     }
 
-    #[tool(description = "Run formatting checks against the workspace's spec.yaml. Always uses the workspace spec. Returns a list of check outcomes (id, status, message, page).")]
-    async fn check_pdf(&self, params: Parameters<CheckPdfParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Run formatting checks against the workspace's spec.yaml. Always uses the workspace spec. Returns a list of check outcomes (id, status, message, page)."
+    )]
+    async fn check_pdf(
+        &self,
+        params: Parameters<CheckPdfParams>,
+    ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let outcomes = workspace::check_pdf(&self.config, &p.workspace, &p.pdf_path)
-            .map_err(Self::err)?;
+        let outcomes =
+            workspace::check_pdf(&self.config, &p.workspace, &p.pdf_path).map_err(Self::err)?;
         let json = serde_json::to_string(&outcomes)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
-    #[tool(description = "Extract text and metadata from a PDF or DOCX. Returns a JSON ParsedDocument (pages, paragraphs, headings, metadata).")]
+    #[tool(
+        description = "Extract text and metadata from a PDF or DOCX. Returns a JSON ParsedDocument (pages, paragraphs, headings, metadata)."
+    )]
     async fn extract_document(
         &self,
         params: Parameters<ExtractDocumentParams>,
