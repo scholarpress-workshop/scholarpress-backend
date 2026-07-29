@@ -3,12 +3,10 @@
 ## Context
 
 The `scholarpress-publish` bespoke app (Next.js chat + Rust doc service) was
-the first attempt at an AI-driven dissertation formatter. It worked, but the
-chat UI couldn't directly manipulate Typst template files — the LLM could only
-trigger high-level operations, leaving real template editing as a round-trip
-through the human. The agentic ecosystem is moving fast: new harnesses
-(OpenCode, Claude Code, Cursor, custom) appear every quarter. Building
-workflow into one app means rebuilding it every time the harness shifts.
+the first attempt at an AI-driven dissertation formatter. It did not work 
+well. Also, the agentic ecosystem is moving fast: new harnesses
+(OpenCode, Claude Code, Cursor, custom) appear every quarter with 
+rapidly expanding capabilities.
 
 This design pivots the product to **catalog + MCP server**: keep the
 high-quality institution profiles and Typst templates in
@@ -93,7 +91,9 @@ workspaces/<name>/
 ### Catalog integration
 
 - Root: `SCHOLARPRESS_CATALOG_PATH` (default `../scholarpress-catalog`,
-  existing sibling convention).
+  existing sibling convention). v1 supports only a local directory
+  path; remote catalog sources (e.g. a GitHub URL cloned on demand, a
+  registry fetch) are a deliberate deferral — see Non-goals.
 - `list_profiles()` scans every `<top>/<id>/` that has both `spec.yaml`
   and `template/template.typ`. Returns the id, display name, and scope
   (institution / journal / server / grant).
@@ -230,6 +230,11 @@ parked here with its trigger condition for revisit.
 - **The 2 failing IU checks** (31/33 currently pass) — not investigated
   in this design. Revisit if the LLM workflows in sp-mcp surface them
   as a practical problem.
+- **Remote catalog sources** (GitHub URL cloned on demand, registry
+  fetch, etc.) — v1 supports only a local `SCHOLARPRESS_CATALOG_PATH`
+  sibling directory. Revisit when distribution beyond the local user
+  becomes real (multi-user, shared team catalog, or profile publishing
+  workflow).
 
 ## Known limitations
 
