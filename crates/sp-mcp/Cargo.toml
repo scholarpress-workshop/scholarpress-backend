@@ -1,0 +1,15 @@
+[package]
+name = "sp-mcp"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "sp_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sp-mcp"
+path = "src/main.rs"
+
+[dependencies]
+thiserror = "1"
