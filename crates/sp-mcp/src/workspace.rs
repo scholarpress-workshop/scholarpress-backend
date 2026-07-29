@@ -242,6 +242,63 @@ pub fn compile_typst(
     Ok(out_path)
 }
 
+use sp_check as check;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckOutcome {
+    pub id: String,
+    pub status: String,    // "PASS" | "FAIL" | "MANUAL" | "ERROR"
+    pub message: String,
+    pub page: Option<usize>,
+}
+
+pub fn check_pdf(
+    _config: &Config,
+    workspace: &Path,
+    pdf_path: &Path,
+) -> Result<Vec<CheckOutcome>, SpMcpError> {
+    if !workspace.is_dir() {
+        return Err(SpMcpError::WorkspaceNotFound(
+            workspace.display().to_string(),
+            workspace.to_path_buf(),
+        ));
+    }
+    let spec_path = workspace.join("spec.yaml");
+    if !spec_path.is_file() {
+        return Err(SpMcpError::SpecMissing(spec_path));
+    }
+    let pdf_abs = if pdf_path.is_absolute() {
+        pdf_path.to_path_buf()
+    } else {
+        workspace.join(pdf_path)
+    };
+    if !pdf_abs.is_file() {
+        return Err(SpMcpError::Check(format!(
+            "pdf not found: {}",
+            pdf_abs.display()
+        )));
+    }
+
+    let spec = check::spec::load_spec(&spec_path)
+        .map_err(|e| SpMcpError::Check(format!("failed to load spec: {}", e)))?;
+    let options = check::engine::CheckOptions::default();
+    let results = check::engine::run_checks(&spec, &pdf_abs, &options)
+        .map_err(|e| SpMcpError::Check(format!("check run failed: {}", e)))?;
+    let report = check::report::build_report(results);
+
+    let outcomes = report
+        .results
+        .into_iter()
+        .map(|r| CheckOutcome {
+            id: r.check_id,
+            status: r.status.as_str().to_string(),
+            message: r.detail,
+            page: r.evidence.first().map(|e| e.page),
+        })
+        .collect();
+    Ok(outcomes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -396,6 +453,46 @@ mod tests {
             }
             Err(e) => panic!("unexpected error: {:?}", e),
         }
+    }
+
+    #[test]
+    fn check_pdf_against_iu_baseline() {
+        // Walk up from CARGO_MANIFEST_DIR until we find a directory containing
+        // a sibling scholarpress-catalog. This works in both regular and worktree
+        // layouts.
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let catalog = (0..6)
+            .map(|i| {
+                let mut p = manifest_dir.clone();
+                for _ in 0..=i {
+                    p.pop();
+                }
+                p.join("scholarpress-catalog")
+            })
+            .find(|p| p.is_dir());
+        let catalog = match catalog {
+            Some(p) => p,
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found near {}", manifest_dir.display());
+                return;
+            }
+        };
+        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.pdf");
+        if !baseline.is_file() {
+            eprintln!("SKIP: IU baseline fixture not present (run bash compile.sh)");
+            return;
+        }
+
+        let ws = local_tempdir();
+        fs::write(
+            ws.join("spec.yaml"),
+            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+        )
+        .unwrap();
+
+        let cfg = Config::new(catalog, PathBuf::from("/w"));
+        let outcomes = check_pdf(&cfg, &ws, &baseline).unwrap();
+        assert!(!outcomes.is_empty(), "expected at least one check result");
     }
 
     fn local_tempdir() -> PathBuf {
