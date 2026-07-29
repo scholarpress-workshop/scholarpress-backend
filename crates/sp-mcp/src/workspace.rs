@@ -123,6 +123,81 @@ fn read_profile_name(spec_path: &Path) -> Option<String> {
     None
 }
 
+pub fn create_workspace(
+    config: &Config,
+    name: &str,
+    profile_id: &str,
+) -> Result<PathBuf, SpMcpError> {
+    validate_name(name)?;
+
+    let profile_dir = config.catalog_path.join(profile_id);
+    if !profile_dir.is_dir() {
+        let available: Vec<String> = list_profiles(config)?
+            .into_iter()
+            .map(|p| p.id)
+            .collect();
+        return Err(SpMcpError::ProfileNotFound(
+            profile_id.to_string(),
+            available,
+        ));
+    }
+    if !profile_dir.join("spec.yaml").is_file() {
+        return Err(SpMcpError::SpecMissing(profile_dir.join("spec.yaml")));
+    }
+
+    let target = config.workspace_root.join(name);
+    if target.exists() {
+        return Err(SpMcpError::WorkspaceExists(target));
+    }
+    std::fs::create_dir_all(target.join("data"))?;
+    std::fs::create_dir_all(target.join("out"))?;
+
+    copy_tree(&profile_dir.join("spec.yaml"), &target.join("spec.yaml"))?;
+    let template_src = profile_dir.join("template");
+    if template_src.is_dir() {
+        copy_dir_recursive(&template_src, &target.join("template"))?;
+    }
+
+    Ok(target)
+}
+
+fn validate_name(name: &str) -> Result<(), SpMcpError> {
+    if name.is_empty() {
+        return Err(SpMcpError::BadWorkspaceName(name.to_string()));
+    }
+    if name.contains('/') || name.contains("..") || name.contains('\0') {
+        return Err(SpMcpError::BadWorkspaceName(name.to_string()));
+    }
+    Ok(())
+}
+
+fn copy_tree(src: &Path, dst: &Path) -> Result<(), SpMcpError> {
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::copy(src, dst)?;
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), SpMcpError> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if from.is_dir() {
+            // skip tests/corpus — large calibration PDFs
+            if from.file_name() == Some(std::ffi::OsStr::new("tests")) {
+                continue;
+            }
+            copy_dir_recursive(&from, &to)?;
+        } else {
+            std::fs::copy(&from, &to)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,6 +268,63 @@ mod tests {
         let iu_info = profiles.iter().find(|p| p.id == "institutions/iu").unwrap();
         assert_eq!(iu_info.scope, "institutions");
         assert_eq!(iu_info.name, "Indiana University");
+    }
+
+    #[test]
+    fn create_workspace_copies_spec_and_template() {
+        let catalog = local_tempdir();
+        let iu = catalog.join("institutions").join("iu");
+        fs::create_dir_all(iu.join("template").join("sections")).unwrap();
+        fs::write(iu.join("spec.yaml"), "institution: IU\n").unwrap();
+        fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
+        fs::write(
+            iu.join("template").join("sections").join("ch.typ"),
+            "= Chapter\n",
+        )
+        .unwrap();
+        // create a tests/ dir to verify it is skipped
+        fs::create_dir_all(iu.join("tests").join("corpus")).unwrap();
+        fs::write(iu.join("tests").join("ignored.typ"), "ignored\n").unwrap();
+
+        let ws_root = local_tempdir();
+        let cfg = Config::new(catalog.clone(), ws_root.clone());
+
+        let path = create_workspace(&cfg, "iu-job-1", "institutions/iu").unwrap();
+        assert!(path.is_dir());
+        assert!(path.join("spec.yaml").is_file());
+        assert!(path.join("template").join("template.typ").is_file());
+        assert!(path.join("template").join("sections").join("ch.typ").is_file());
+        assert!(path.join("data").is_dir());
+        assert!(path.join("out").is_dir());
+        // tests/ skipped
+        assert!(!path.join("template").join("tests").exists());
+    }
+
+    #[test]
+    fn create_workspace_rejects_bad_name() {
+        let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
+        assert!(create_workspace(&cfg, "../escape", "institutions/iu").is_err());
+        assert!(create_workspace(&cfg, "a/b", "institutions/iu").is_err());
+        assert!(create_workspace(&cfg, "", "institutions/iu").is_err());
+    }
+
+    #[test]
+    fn create_workspace_unknown_profile_lists_available() {
+        let catalog = local_tempdir();
+        let iu = catalog.join("institutions").join("iu");
+        fs::create_dir_all(iu.join("template")).unwrap();
+        fs::write(iu.join("spec.yaml"), "institution: IU\n").unwrap();
+        fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
+
+        let cfg = Config::new(catalog, PathBuf::from("/w"));
+        let err = create_workspace(&cfg, "x", "institutions/missing").unwrap_err();
+        match err {
+            SpMcpError::ProfileNotFound(id, avail) => {
+                assert_eq!(id, "institutions/missing");
+                assert_eq!(avail, vec!["institutions/iu".to_string()]);
+            }
+            other => panic!("expected ProfileNotFound, got {:?}", other),
+        }
     }
 
     fn local_tempdir() -> PathBuf {
