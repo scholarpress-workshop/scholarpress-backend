@@ -12,6 +12,10 @@ formatting checks) for use from any MCP-compliant agent harness.
   cargo install typst-cli
   # or download from https://github.com/typst/typst/releases
   ```
+- The `typstyle` binary on `PATH` (for `check_typst` and `format_typst`):
+  ```bash
+  cargo install typstyle --locked
+  ```
 
 ## Build
 
