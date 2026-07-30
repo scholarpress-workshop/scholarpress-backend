@@ -235,6 +235,73 @@ pub fn compile_typst(
     Ok(out_path)
 }
 
+pub fn check_typst(workspace: &Path, file_path: &Path) -> Result<String, SpMcpError> {
+    if !workspace.is_dir() {
+        return Err(SpMcpError::Compilation(format!(
+            "workspace not found: {}",
+            workspace.display()
+        )));
+    }
+    let file_abs = if file_path.is_absolute() {
+        file_path.to_path_buf()
+    } else {
+        workspace.join(file_path)
+    };
+    if !file_abs.is_file() {
+        return Err(SpMcpError::Compilation(format!(
+            "file not found: {}",
+            file_abs.display()
+        )));
+    }
+
+    let output = std::process::Command::new("typstyle")
+        .arg("--check")
+        .arg(&file_abs)
+        .current_dir(workspace)
+        .output()
+        .map_err(|e| SpMcpError::Compilation(format!("failed to run typstyle: {}", e)))?;
+
+    if output.status.success() {
+        Ok("ok".to_string())
+    } else {
+        Ok("needs_format".to_string())
+    }
+}
+
+pub fn format_typst(workspace: &Path, file_path: &Path) -> Result<String, SpMcpError> {
+    if !workspace.is_dir() {
+        return Err(SpMcpError::Compilation(format!(
+            "workspace not found: {}",
+            workspace.display()
+        )));
+    }
+    let file_abs = if file_path.is_absolute() {
+        file_path.to_path_buf()
+    } else {
+        workspace.join(file_path)
+    };
+    if !file_abs.is_file() {
+        return Err(SpMcpError::Compilation(format!(
+            "file not found: {}",
+            file_abs.display()
+        )));
+    }
+
+    let output = std::process::Command::new("typstyle")
+        .arg("-i")
+        .arg(&file_abs)
+        .current_dir(workspace)
+        .output()
+        .map_err(|e| SpMcpError::Compilation(format!("failed to run typstyle: {}", e)))?;
+
+    if output.status.success() {
+        Ok(file_abs.display().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(SpMcpError::Compilation(format!("typstyle failed: {}", stderr)))
+    }
+}
+
 use sp_check as check;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -569,6 +636,50 @@ mod tests {
             Ok(v) => assert!(v.is_string()),
             Err(SpMcpError::Extraction(_)) => {} // expected with garbage
             _ => panic!("unexpected error"),
+        }
+    }
+
+    #[test]
+    fn check_typst_catches_syntax_error_or_skips_if_no_typstyle() {
+        let ws = local_tempdir();
+        fs::write(ws.join("bad.typ"), "= Hello\n$17 million\n").unwrap();
+        let result = check_typst(&ws, Path::new("bad.typ"));
+        match result {
+            Ok(status) => {
+                // typstyle on PATH — $ in prose should trigger needs_format
+                assert_eq!(status, "needs_format");
+            }
+            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {
+                // typstyle not on PATH — skip
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn check_typst_clean_file_is_ok_or_skips() {
+        let ws = local_tempdir();
+        fs::write(ws.join("clean.typ"), "= Hello\n\nWorld.\n").unwrap();
+        let result = check_typst(&ws, Path::new("clean.typ"));
+        match result {
+            Ok(status) => assert_eq!(status, "ok"),
+            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn format_typst_modifies_file_or_skips_if_no_typstyle() {
+        let ws = local_tempdir();
+        fs::write(ws.join("input.typ"), "= Hello\n\n\n  world\n").unwrap();
+        let result = format_typst(&ws, Path::new("input.typ"));
+        match result {
+            Ok(_) => {
+                let formatted = fs::read_to_string(ws.join("input.typ")).unwrap();
+                assert!(!formatted.contains("  world"));
+            }
+            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
