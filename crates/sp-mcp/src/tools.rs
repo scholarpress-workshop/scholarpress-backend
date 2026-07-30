@@ -39,6 +39,7 @@ pub struct CheckPdfParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ExtractDocumentParams {
     pub file_path: PathBuf,
+    pub format: Option<String>, // "json" (default) or "markdown"
 }
 
 #[tool_router]
@@ -125,14 +126,14 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Extract text and metadata from a PDF or DOCX. Returns a JSON ParsedDocument (pages, paragraphs, headings, metadata)."
+        description = "Extract text and metadata from a PDF or DOCX. Pass format: \"markdown\" to get body content as markdown (available for DOCX via anytomd-rs). Default format is \"json\" which returns a full ParsedDocument with pages, paragraphs, headings, metadata, and markdown_text fields."
     )]
     async fn extract_document(
         &self,
         params: Parameters<ExtractDocumentParams>,
     ) -> Result<CallToolResult, McpError> {
-        let p = params.0.file_path;
-        let doc = workspace::extract_document(&p).map_err(Self::err)?;
+        let p = params.0;
+        let doc = workspace::extract_document(&p.file_path, p.format.as_deref()).map_err(Self::err)?;
         let json = serde_json::to_string(&doc)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))

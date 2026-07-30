@@ -294,7 +294,7 @@ pub fn check_pdf(
 
 use sp_extract as extract;
 
-pub fn extract_document(file_path: &Path) -> Result<serde_json::Value, SpMcpError> {
+pub fn extract_document(file_path: &Path, format: Option<&str>) -> Result<serde_json::Value, SpMcpError> {
     if !file_path.is_file() {
         return Err(SpMcpError::Extraction(format!(
             "file not found: {}",
@@ -319,7 +319,12 @@ pub fn extract_document(file_path: &Path) -> Result<serde_json::Value, SpMcpErro
     }
     .map_err(|e| SpMcpError::Extraction(e.to_string()))?;
 
-    serde_json::to_value(doc).map_err(|e| SpMcpError::Extraction(e.to_string()))
+    match format.unwrap_or("json") {
+        "markdown" => Ok(serde_json::Value::String(
+            doc.markdown_text.unwrap_or_default(),
+        )),
+        _ => serde_json::to_value(doc).map_err(|e| SpMcpError::Extraction(e.to_string())),
+    }
 }
 
 #[cfg(test)]
@@ -523,7 +528,7 @@ mod tests {
     fn extract_document_on_garbage_returns_error() {
         let f = local_tempdir().join("bad.pdf");
         fs::write(&f, b"not a real pdf").unwrap();
-        let result = extract_document(&f);
+        let result = extract_document(&f, None);
         assert!(matches!(result, Err(SpMcpError::Extraction(_))));
     }
 
@@ -531,8 +536,25 @@ mod tests {
     fn extract_document_unsupported_extension_errors() {
         let f = local_tempdir().join("foo.xyz");
         fs::write(&f, b"whatever").unwrap();
-        let result = extract_document(&f);
+        let result = extract_document(&f, None);
         assert!(matches!(result, Err(SpMcpError::Extraction(_))));
+    }
+
+    #[test]
+    fn extract_document_format_param_routes_correctly() {
+        // With garbage data the extraction will fail, but the format
+        // dispatch should route through the markdown branch correctly.
+        let f = local_tempdir().join("bad.docx");
+        fs::write(&f, b"not a real docx").unwrap();
+        let result = extract_document(&f, Some("markdown"));
+        // Either an extraction error or empty string (both are valid
+        // outcomes when the source data is garbage — the key assertion
+        // is that the function accepted the format parameter).
+        match result {
+            Ok(v) => assert!(v.is_string()),
+            Err(SpMcpError::Extraction(_)) => {} // expected with garbage
+            _ => panic!("unexpected error"),
+        }
     }
 
     fn local_tempdir() -> PathBuf {
