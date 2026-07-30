@@ -42,6 +42,18 @@ pub struct ExtractDocumentParams {
     pub format: Option<String>, // "json" (default) or "markdown"
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct CheckTypstParams {
+    pub workspace: PathBuf,
+    pub file_path: PathBuf,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct FormatTypstParams {
+    pub workspace: PathBuf,
+    pub file_path: PathBuf,
+}
+
 #[tool_router]
 impl ScholarPressService {
     pub fn new(config: Config) -> Self {
@@ -137,6 +149,30 @@ impl ScholarPressService {
         let json = serde_json::to_string(&doc)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
+    }
+
+    #[tool(
+        description = "Validate Typst syntax without full compilation. Runs `typstyle --check`. Returns \"ok\" if the file is properly formatted, \"needs_format\" if issues found (e.g., $ in prose, unclosed delimiters). Requires `typstyle` on PATH (install with `cargo install typstyle --locked`)."
+    )]
+    async fn check_typst(
+        &self,
+        params: Parameters<CheckTypstParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let p = params.0;
+        let status = workspace::check_typst(&p.workspace, &p.file_path).map_err(Self::err)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(status)]))
+    }
+
+    #[tool(
+        description = "Format a Typst file in-place. Runs `typstyle -i` to normalize indentation, whitespace, and line width. Returns the absolute path of the formatted file. Requires `typstyle` on PATH (install with `cargo install typstyle --locked`)."
+    )]
+    async fn format_typst(
+        &self,
+        params: Parameters<FormatTypstParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let p = params.0;
+        let path = workspace::format_typst(&p.workspace, &p.file_path).map_err(Self::err)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(path)]))
     }
 }
 
