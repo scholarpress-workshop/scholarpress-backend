@@ -238,11 +238,18 @@ pub fn compile_typst(
 use sp_check as check;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceDetail {
+    pub page: usize,
+    pub excerpt: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckOutcome {
     pub id: String,
     pub status: String, // "PASS" | "FAIL" | "MANUAL" | "ERROR"
     pub message: String,
     pub page: Option<usize>,
+    pub evidence: Vec<EvidenceDetail>,
 }
 
 pub fn check_pdf(
@@ -287,6 +294,14 @@ pub fn check_pdf(
             status: r.status.as_str().to_string(),
             message: r.detail,
             page: r.evidence.first().map(|e| e.page),
+            evidence: r
+                .evidence
+                .into_iter()
+                .map(|e| EvidenceDetail {
+                    page: e.page,
+                    excerpt: e.excerpt,
+                })
+                .collect(),
         })
         .collect();
     Ok(outcomes)
