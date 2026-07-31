@@ -374,41 +374,6 @@ pub fn check_pdf(
     Ok(outcomes)
 }
 
-use sp_extract as extract;
-
-pub fn extract_document(file_path: &Path, format: Option<&str>) -> Result<serde_json::Value, SpMcpError> {
-    if !file_path.is_file() {
-        return Err(SpMcpError::Extraction(format!(
-            "file not found: {}",
-            file_path.display()
-        )));
-    }
-    let bytes = std::fs::read(file_path)?;
-    let ext = file_path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    let doc = match ext.as_str() {
-        "pdf" => extract::extract_pdf(&bytes),
-        "docx" => extract::extract_docx(&bytes),
-        other => {
-            return Err(SpMcpError::Extraction(format!(
-                "unsupported extension: .{}",
-                other
-            )));
-        }
-    }
-    .map_err(|e| SpMcpError::Extraction(e.to_string()))?;
-
-    match format.unwrap_or("json") {
-        "markdown" => Ok(serde_json::Value::String(
-            doc.markdown_text.unwrap_or_default(),
-        )),
-        _ => serde_json::to_value(doc).map_err(|e| SpMcpError::Extraction(e.to_string())),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -604,39 +569,6 @@ mod tests {
         let cfg = Config::new(catalog, PathBuf::from("/w"));
         let outcomes = check_pdf(&cfg, &ws, &baseline).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check result");
-    }
-
-    #[test]
-    fn extract_document_on_garbage_returns_error() {
-        let f = local_tempdir().join("bad.pdf");
-        fs::write(&f, b"not a real pdf").unwrap();
-        let result = extract_document(&f, None);
-        assert!(matches!(result, Err(SpMcpError::Extraction(_))));
-    }
-
-    #[test]
-    fn extract_document_unsupported_extension_errors() {
-        let f = local_tempdir().join("foo.xyz");
-        fs::write(&f, b"whatever").unwrap();
-        let result = extract_document(&f, None);
-        assert!(matches!(result, Err(SpMcpError::Extraction(_))));
-    }
-
-    #[test]
-    fn extract_document_format_param_routes_correctly() {
-        // With garbage data the extraction will fail, but the format
-        // dispatch should route through the markdown branch correctly.
-        let f = local_tempdir().join("bad.docx");
-        fs::write(&f, b"not a real docx").unwrap();
-        let result = extract_document(&f, Some("markdown"));
-        // Either an extraction error or empty string (both are valid
-        // outcomes when the source data is garbage — the key assertion
-        // is that the function accepted the format parameter).
-        match result {
-            Ok(v) => assert!(v.is_string()),
-            Err(SpMcpError::Extraction(_)) => {} // expected with garbage
-            _ => panic!("unexpected error"),
-        }
     }
 
     #[test]
