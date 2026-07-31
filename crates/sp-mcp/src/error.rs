@@ -26,6 +26,9 @@ pub enum SpMcpError {
     #[error("extraction failed: {0}")]
     Extraction(String),
 
+    #[error("conversion failed: {0}")]
+    Conversion(String),
+
     #[error("compilation failed: {0}")]
     Compilation(String),
 

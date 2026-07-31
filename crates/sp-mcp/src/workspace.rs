@@ -374,6 +374,80 @@ pub fn check_pdf(
     Ok(outcomes)
 }
 
+pub fn pandoc_convert(
+    file_path: &Path,
+    format: &str,
+    workspace: &Path,
+) -> Result<PathBuf, SpMcpError> {
+    if !file_path.is_file() {
+        return Err(SpMcpError::Conversion(format!(
+            "file not found: {}",
+            file_path.display()
+        )));
+    }
+
+    let ext = file_path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if ext != "docx" {
+        return Err(SpMcpError::Conversion(format!(
+            "unsupported extension: .{} (only .docx supported)",
+            ext
+        )));
+    }
+
+    let to_format = match format {
+        "typst" => "typst",
+        "ast" => "json",
+        other => {
+            return Err(SpMcpError::Conversion(format!(
+                "unsupported format: {other} (use \"typst\" or \"ast\")"
+            )));
+        }
+    };
+
+    let stem = file_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "document".to_string());
+
+    let out_ext = if format == "ast" { "json" } else { "typst" };
+    let out_name = format!("{stem}.{out_ext}");
+
+    std::fs::create_dir_all(workspace.join("out"))?;
+    let out_path = workspace.join("out").join(&out_name);
+
+    let output = std::process::Command::new("pandoc")
+        .arg(file_path)
+        .arg("--from")
+        .arg("docx")
+        .arg("--to")
+        .arg(to_format)
+        .arg("--output")
+        .arg(&out_path)
+        .output()
+        .map_err(|e| {
+            SpMcpError::Conversion(format!("failed to run pandoc: {e}"))
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(SpMcpError::Conversion(format!(
+            "pandoc failed: {stderr}"
+        )));
+    }
+
+    if !out_path.is_file() {
+        return Err(SpMcpError::Conversion(format!(
+            "pandoc produced no output at {out_name}"
+        )));
+    }
+
+    Ok(out_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -613,6 +687,69 @@ mod tests {
             Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {}
             Err(e) => panic!("unexpected error: {:?}", e),
         }
+    }
+
+    #[test]
+    fn pandoc_convert_docx_to_typst_or_skips_if_no_pandoc() {
+        let catalog = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+            .map(|p| p.join("scholarpress-catalog"))
+            .filter(|p| p.is_dir());
+        let catalog = match catalog {
+            Some(p) => p,
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found");
+                return;
+            }
+        };
+        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.docx");
+        if !baseline.is_file() {
+            eprintln!("SKIP: baseline.docx fixture not present");
+            return;
+        }
+
+        let ws = local_tempdir();
+        let result = pandoc_convert(&baseline, "typst", &ws);
+        match result {
+            Ok(out) => {
+                assert!(out.is_file(), "typst output should exist");
+                let content = fs::read_to_string(&out).unwrap();
+                assert!(!content.is_empty(), "typst output should not be empty");
+            }
+            Err(SpMcpError::Conversion(msg))
+                if msg.contains("pandoc") =>
+            {
+                eprintln!("SKIP: pandoc not on PATH ({})", msg);
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn pandoc_convert_unsupported_extension_errors() {
+        let f = local_tempdir().join("foo.xyz");
+        fs::write(&f, b"whatever").unwrap();
+        let ws = local_tempdir();
+        let result = pandoc_convert(&f, "typst", &ws);
+        assert!(matches!(result, Err(SpMcpError::Conversion(_))));
+    }
+
+    #[test]
+    fn pandoc_convert_unsupported_format_errors() {
+        let f = local_tempdir().join("test.docx");
+        fs::write(&f, b"fake").unwrap();
+        let ws = local_tempdir();
+        let result = pandoc_convert(&f, "xml", &ws);
+        assert!(matches!(result, Err(SpMcpError::Conversion(_))));
+    }
+
+    #[test]
+    fn pandoc_convert_missing_file_errors() {
+        let ws = local_tempdir();
+        let result = pandoc_convert(Path::new("/nonexistent/foo.docx"), "typst", &ws);
+        assert!(matches!(result, Err(SpMcpError::Conversion(_))));
     }
 
     fn local_tempdir() -> PathBuf {

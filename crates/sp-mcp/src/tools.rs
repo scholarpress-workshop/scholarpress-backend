@@ -48,6 +48,13 @@ pub struct FormatTypstParams {
     pub file_path: PathBuf,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PandocConvertParams {
+    pub file_path: PathBuf,
+    pub format: String,
+    pub workspace: PathBuf,
+}
+
 #[tool_router]
 impl ScholarPressService {
     pub fn new(config: Config) -> Self {
@@ -129,6 +136,21 @@ impl ScholarPressService {
         let json = serde_json::to_string(&outcomes)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
+    }
+
+    #[tool(
+        description = "Convert a DOCX file to Typst or pandoc JSON AST. Writes output to <workspace>/out/<stem>.typ (for format: \"typst\") or <workspace>/out/<stem>.json (for format: \"ast\"). Returns the absolute output path. Requires `pandoc` on PATH (already installed).\n\nAST headings are unreliable — many DOCX files use direct formatting instead of heading styles. Prefer TOC text over AST for section boundaries."
+    )]
+    async fn pandoc_convert(
+        &self,
+        params: Parameters<PandocConvertParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let p = params.0;
+        let out = workspace::pandoc_convert(&p.file_path, &p.format, &p.workspace)
+            .map_err(Self::err)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(
+            out.display().to_string(),
+        )]))
     }
 
     #[tool(
