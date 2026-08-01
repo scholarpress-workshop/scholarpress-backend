@@ -448,6 +448,42 @@ pub fn pandoc_convert(
     Ok(out_path)
 }
 
+pub fn interface_doc(workspace: &Path) -> Result<String, SpMcpError> {
+    if !workspace.is_dir() {
+        return Err(SpMcpError::WorkspaceNotFound(
+            workspace.display().to_string(),
+            workspace.to_path_buf(),
+        ));
+    }
+    let ref_path = workspace.join("template").join("REFERENCE.json");
+    if !ref_path.is_file() {
+        return Err(SpMcpError::Compilation(format!(
+            "REFERENCE.json not found at {}. Generate it by running CI in the catalog repo (generate-reference workflow), or run `typst compile generate-json-ref.typ REFERENCE.json` in the template directory.",
+            ref_path.display()
+        )));
+    }
+    let text = std::fs::read_to_string(&ref_path).map_err(|e| {
+        SpMcpError::Compilation(format!(
+            "failed to read REFERENCE.json at {}: {}",
+            ref_path.display(), e
+        ))
+    })?;
+    // Pretty-print the JSON so the agent can read it as formatted text
+    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
+        SpMcpError::Compilation(format!(
+            "invalid JSON in REFERENCE.json at {}: {}",
+            ref_path.display(), e
+        ))
+    })?;
+    let pretty = serde_json::to_string_pretty(&value).map_err(|e| {
+        SpMcpError::Compilation(format!(
+            "failed to format REFERENCE.json: {}",
+            e
+        ))
+    })?;
+    Ok(pretty)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -750,6 +786,39 @@ mod tests {
         let ws = local_tempdir();
         let result = pandoc_convert(Path::new("/nonexistent/foo.docx"), "typst", &ws);
         assert!(matches!(result, Err(SpMcpError::Conversion(_))));
+    }
+
+    #[test]
+    fn interface_doc_reads_ref_json_or_errors_if_missing() {
+        let ws = local_tempdir();
+        // Case 1: no REFERENCE.json → error
+        let result = interface_doc(&ws);
+        match result {
+            Err(SpMcpError::Compilation(msg)) => {
+                assert!(msg.contains("REFERENCE.json not found"),
+                    "expected message about missing file, got: {}", msg);
+            }
+            other => panic!("expected Compilation error for missing file, got {:?}", other),
+        }
+
+        // Case 2: REFERENCE.json exists → return pretty-printed content
+        std::fs::create_dir_all(ws.join("template")).unwrap();
+        fs::write(
+            ws.join("template").join("REFERENCE.json"),
+            r#"{"profile":"test","globals":[],"functions":[
+                {"name":"foo","file":"sections/foo.typ","signature":"foo(x: 1)","description":"A test function.","params":[{"name":"x","type":"int","default":"1","description":"Test param"}]}
+            ]}"#,
+        ).unwrap();
+        let result = interface_doc(&ws).unwrap();
+        assert!(result.contains("\"foo\""), "output should contain function name");
+        assert!(result.contains("\"signature\""), "output should contain signature field");
+        assert!(result.contains("foo(x: 1)"), "output should contain the signature string");
+    }
+
+    #[test]
+    fn interface_doc_workspace_not_found() {
+        let result = interface_doc(Path::new("/nonexistent-ws-xyz"));
+        assert!(matches!(result, Err(SpMcpError::WorkspaceNotFound(_, _))));
     }
 
     fn local_tempdir() -> PathBuf {
