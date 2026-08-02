@@ -40,6 +40,13 @@ pub fn compile(source: &str, root: Option<&Path>) -> Result<Vec<u8>, Box<dyn std
         Ok(output.stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        // ponytail: agent feedback suggested structured JSON diagnostics and a
+        // dry-run mode. Experiments showed typst stderr is already clean
+        // <file>:<line>:<col> text (~300 bytes) that LLMs parse natively. No
+        // --check flag exists, no --diagnostic-format json exists. The real
+        // compile-loop pain was from agents guessing wrong data shapes — solved
+        // by the interface_doc tool (Issue #7). Don't add structured parsing or
+        // format switching unless typst adds native JSON diagnostics.
         Err(stderr.into())
     }
 }

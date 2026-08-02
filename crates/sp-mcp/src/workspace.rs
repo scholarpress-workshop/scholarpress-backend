@@ -218,6 +218,12 @@ pub fn compile_typst(
 
     let source = std::fs::read_to_string(&entry_abs)?;
     // sp-typst compiles the entry file from --root=workspace.
+    // ponytail: on success, returns only the output path (not PDF bytes) so
+    // there's no heavy-payload problem. On failure, typst stderr is clean
+    // <file>:<line>:<col> text the LLM reads directly — no structured parsing
+    // needed. A separate dry_run tool was considered but rejected because it
+    // would double LLM round-trips (3s per turn) to save ~50ms of typst compile
+    // time. See sp-typst/src/lib.rs for related comment.
     let bytes = typst::compile(&source, Some(workspace))
         .map_err(|e| SpMcpError::Compilation(e.to_string()))?;
 
