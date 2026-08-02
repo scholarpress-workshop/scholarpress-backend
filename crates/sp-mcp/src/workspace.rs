@@ -219,7 +219,7 @@ pub fn compile_typst(
     let source = std::fs::read_to_string(&entry_abs)?;
     // sp-typst compiles the entry file from --root=workspace.
     let bytes = typst::compile(&source, Some(workspace))
-        .map_err(|e| SpMcpError::Compilation(format!("typst compile failed: {}", e)))?;
+        .map_err(|e| SpMcpError::Compilation(e.to_string()))?;
 
     let stem = entry_path
         .file_stem()

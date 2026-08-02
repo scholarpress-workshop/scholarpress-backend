@@ -40,6 +40,6 @@ pub fn compile(source: &str, root: Option<&Path>) -> Result<Vec<u8>, Box<dyn std
         Ok(output.stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Typst compilation failed: {}", stderr).into())
+        Err(stderr.into())
     }
 }
