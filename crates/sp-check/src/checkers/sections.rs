@@ -77,15 +77,20 @@ fn find_abstract_page(doc: &Document) -> Option<&sp_extract::document::ParsedPag
                     .collect::<Vec<_>>()
                     .join(" ");
                 let low = text.to_lowercase();
+                // ponytail: n>100 excluded real abstracts (golden PDF has 5
+                // spans). n>3 excludes blank/copyright pages (2 spans) but keeps
+                // all abstract pages, which the is_other keyword filter already
+                // distinguishes from other front-matter sections.
                 let is_other = [
                     "dedication",
                     "acknowledgement",
                     "acknowledgments",
                     "preface",
+                    "copyright",
                 ]
                 .iter()
                 .any(|h| low[..200.min(low.len())].contains(h));
-                if n > 100 && !is_other {
+                if n > 3 && !is_other {
                     return Some(page);
                 }
             }
@@ -1290,5 +1295,56 @@ mod tests {
         };
         let r = AbstractTextCenteredChecker.check(&doc, &Value::Null);
         assert!(matches!(r.status, Status::Pass | Status::Fail));
+    }
+
+    #[test]
+    fn test_find_abstract_with_sparse_front_matter() {
+        let mut pages = vec![chapter_page()];
+        pages.push(Page {
+            text: String::new(),
+            page_number: 2,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![span(
+                "Accepted by the graduate faculty",
+                80.0,
+                12.0,
+                "TimesNewRoman",
+            )],
+            images: vec![],
+            paths: vec![],
+        });
+        // Sparse abstract page — only 5 text spans (real-world golden PDF scenario)
+        pages.push(page_with_heading(
+            4,
+            vec![
+                span("ABSTRACT", 200.0, 12.0, "TimesNewRoman"),
+                span("Jane Doe", 230.0, 12.0, "TimesNewRoman"),
+                span("A Study of X", 260.0, 12.0, "TimesNewRoman"),
+                span("The field of X has long been neglected.", 290.0, 12.0, "TimesNewRoman"),
+                span("Additional context follows here.", 320.0, 12.0, "TimesNewRoman"),
+            ],
+        ));
+        pages.push(page_with_heading(
+            6,
+            vec![span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman")],
+        ));
+        let doc = Document {
+            markdown_text: None,
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages,
+        };
+        let page = super::find_abstract_page(&doc);
+        assert!(page.is_some(), "abstract page should be found even with sparse front matter");
+        assert_eq!(page.unwrap().page_number, 4);
     }
 }
