@@ -688,6 +688,68 @@ mod tests {
     }
 
     #[test]
+    fn check_pdf_structural_against_iu_golden() {
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let catalog = (0..6)
+            .map(|i| {
+                let mut p = manifest_dir.clone();
+                for _ in 0..=i {
+                    p.pop();
+                }
+                p.join("scholarpress-catalog")
+            })
+            .find(|p| p.is_dir());
+        let catalog = match catalog {
+            Some(p) => p,
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found");
+                return;
+            }
+        };
+        let golden = catalog.join("institutions/iu/tests/fixtures/golden.pdf");
+        if !golden.is_file() {
+            eprintln!("SKIP: IU golden fixture not present (run compile.sh)");
+            return;
+        }
+
+        let ws = local_tempdir();
+        fs::write(
+            ws.join("spec.yaml"),
+            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+        )
+        .unwrap();
+
+        let cfg = Config::new(catalog, PathBuf::from("/w"));
+        let outcomes = check_pdf(&cfg, &ws, &golden).unwrap();
+        assert!(!outcomes.is_empty(), "expected at least one check result");
+
+        // Verify structural checkers found their targets (not ERROR)
+        for check_id in &[
+            "abstract_word_count",
+            "abstract_text_centered",
+            "abstract_title_format",
+            "acceptance_page_page_number_ii",
+        ] {
+            let outcome = outcomes.iter().find(|o| o.id == *check_id);
+            match outcome {
+                Some(o) => {
+                    assert_ne!(
+                        o.status, "ERROR",
+                        "check '{}' returned ERROR: {} — content not found in PDF",
+                        check_id, o.message
+                    );
+                }
+                None => {
+                    eprintln!(
+                        "WARNING: check '{}' not found in outcomes (may have been removed from spec)",
+                        check_id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn check_typst_catches_syntax_error_or_skips_if_no_typstyle() {
         let ws = local_tempdir();
         fs::write(ws.join("bad.typ"), "= Hello\n$17 million\n").unwrap();
