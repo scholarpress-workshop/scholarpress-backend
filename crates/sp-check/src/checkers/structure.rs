@@ -78,6 +78,17 @@ fn contains_keyword(text: &str, section_id: &str) -> bool {
 }
 
 fn find_body_start(doc: &Document, sections: &HashMap<String, usize>) -> usize {
+    // 1. Check for invisible BODYSTART marker in bottom page-number zone.
+    //    Placed by the template's chapter() function when first: true.
+    //    Invisible (1pt, right+bottom) — only detectable by text extraction.
+    for page in &doc.pages {
+        for span in &page.spans {
+            if span.bbox.1 >= (page.height - 72.0) && span.text.contains("BODYSTART") {
+                return page.page_number;
+            }
+        }
+    }
+
     let fm_max = sections
         .iter()
         .filter(|(k, _)| {
@@ -1237,5 +1248,87 @@ mod tests {
         };
         let r = HeadingsConsistentChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_find_body_start_detects_marker() {
+        use sp_extract::document::{ParsedDocument, ParsedPage, TextSpan};
+        let pages = vec![
+            ParsedPage {
+                text: String::new(),
+                page_number: 1,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    TextSpan {
+                        text: "i".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 10.0,
+                        bbox: (740.0, 750.0, 100.0, 120.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                ],
+                images: vec![],
+                paths: vec![],
+            },
+            ParsedPage {
+                text: String::new(),
+                page_number: 2,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    TextSpan {
+                        text: "ii".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 10.0,
+                        bbox: (740.0, 750.0, 100.0, 120.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                ],
+                images: vec![],
+                paths: vec![],
+            },
+            // Body chapter page with BODYSTART marker
+            ParsedPage {
+                text: String::new(),
+                page_number: 3,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    TextSpan {
+                        text: "BODYSTART".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 1.0,
+                        bbox: (760.0, 761.0, 500.0, 580.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                ],
+                images: vec![],
+                paths: vec![],
+            },
+        ];
+        let doc = ParsedDocument {
+            markdown_text: None,
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 3,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages,
+        };
+        let sections = std::collections::HashMap::new();
+        let start = super::find_body_start(&doc, &sections);
+        assert_eq!(start, 3, "marker on page 3 should be detected as body start");
     }
 }
