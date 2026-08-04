@@ -151,8 +151,8 @@ impl ScholarPressService {
         params: Parameters<PandocConvertParams>,
     ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let out = workspace::pandoc_convert(&p.file_path, &p.format, &p.workspace)
-            .map_err(Self::err)?;
+        let out =
+            workspace::pandoc_convert(&p.file_path, &p.format, &p.workspace).map_err(Self::err)?;
         Ok(CallToolResult::success(vec![ContentBlock::text(
             out.display().to_string(),
         )]))

@@ -304,7 +304,10 @@ pub fn format_typst(workspace: &Path, file_path: &Path) -> Result<String, SpMcpE
         Ok(file_abs.display().to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(SpMcpError::Compilation(format!("typstyle failed: {}", stderr)))
+        Err(SpMcpError::Compilation(format!(
+            "typstyle failed: {}",
+            stderr
+        )))
     }
 }
 
@@ -434,15 +437,11 @@ pub fn pandoc_convert(
         .arg("--output")
         .arg(&out_path)
         .output()
-        .map_err(|e| {
-            SpMcpError::Conversion(format!("failed to run pandoc: {e}"))
-        })?;
+        .map_err(|e| SpMcpError::Conversion(format!("failed to run pandoc: {e}")))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(SpMcpError::Conversion(format!(
-            "pandoc failed: {stderr}"
-        )));
+        return Err(SpMcpError::Conversion(format!("pandoc failed: {stderr}")));
     }
 
     if !out_path.is_file() {
@@ -471,22 +470,20 @@ pub fn interface_doc(workspace: &Path) -> Result<String, SpMcpError> {
     let text = std::fs::read_to_string(&ref_path).map_err(|e| {
         SpMcpError::Compilation(format!(
             "failed to read REFERENCE.json at {}: {}",
-            ref_path.display(), e
+            ref_path.display(),
+            e
         ))
     })?;
     // Pretty-print the JSON so the agent can read it as formatted text
     let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
         SpMcpError::Compilation(format!(
             "invalid JSON in REFERENCE.json at {}: {}",
-            ref_path.display(), e
-        ))
-    })?;
-    let pretty = serde_json::to_string_pretty(&value).map_err(|e| {
-        SpMcpError::Compilation(format!(
-            "failed to format REFERENCE.json: {}",
+            ref_path.display(),
             e
         ))
     })?;
+    let pretty = serde_json::to_string_pretty(&value)
+        .map_err(|e| SpMcpError::Compilation(format!("failed to format REFERENCE.json: {}", e)))?;
     Ok(pretty)
 }
 
@@ -822,9 +819,7 @@ mod tests {
                 let content = fs::read_to_string(&out).unwrap();
                 assert!(!content.is_empty(), "typst output should not be empty");
             }
-            Err(SpMcpError::Conversion(msg))
-                if msg.contains("pandoc") =>
-            {
+            Err(SpMcpError::Conversion(msg)) if msg.contains("pandoc") => {
                 eprintln!("SKIP: pandoc not on PATH ({})", msg);
             }
             Err(e) => panic!("unexpected error: {:?}", e),
@@ -863,10 +858,16 @@ mod tests {
         let result = interface_doc(&ws);
         match result {
             Err(SpMcpError::Compilation(msg)) => {
-                assert!(msg.contains("REFERENCE.json not found"),
-                    "expected message about missing file, got: {}", msg);
+                assert!(
+                    msg.contains("REFERENCE.json not found"),
+                    "expected message about missing file, got: {}",
+                    msg
+                );
             }
-            other => panic!("expected Compilation error for missing file, got {:?}", other),
+            other => panic!(
+                "expected Compilation error for missing file, got {:?}",
+                other
+            ),
         }
 
         // Case 2: REFERENCE.json exists → return pretty-printed content
@@ -878,9 +879,18 @@ mod tests {
             ]}"#,
         ).unwrap();
         let result = interface_doc(&ws).unwrap();
-        assert!(result.contains("\"foo\""), "output should contain function name");
-        assert!(result.contains("\"signature\""), "output should contain signature field");
-        assert!(result.contains("foo(x: 1)"), "output should contain the signature string");
+        assert!(
+            result.contains("\"foo\""),
+            "output should contain function name"
+        );
+        assert!(
+            result.contains("\"signature\""),
+            "output should contain signature field"
+        );
+        assert!(
+            result.contains("foo(x: 1)"),
+            "output should contain the signature string"
+        );
     }
 
     #[test]

@@ -1321,8 +1321,18 @@ mod tests {
                 span("ABSTRACT", 200.0, 12.0, "TimesNewRoman"),
                 span("Jane Doe", 230.0, 12.0, "TimesNewRoman"),
                 span("A Study of X", 260.0, 12.0, "TimesNewRoman"),
-                span("The field of X has long been neglected.", 290.0, 12.0, "TimesNewRoman"),
-                span("Additional context follows here.", 320.0, 12.0, "TimesNewRoman"),
+                span(
+                    "The field of X has long been neglected.",
+                    290.0,
+                    12.0,
+                    "TimesNewRoman",
+                ),
+                span(
+                    "Additional context follows here.",
+                    320.0,
+                    12.0,
+                    "TimesNewRoman",
+                ),
             ],
         ));
         pages.push(page_with_heading(
@@ -1344,7 +1354,10 @@ mod tests {
             pages,
         };
         let page = super::find_abstract_page(&doc);
-        assert!(page.is_some(), "abstract page should be found even with sparse front matter");
+        assert!(
+            page.is_some(),
+            "abstract page should be found even with sparse front matter"
+        );
         assert_eq!(page.unwrap().page_number, 4);
     }
 }

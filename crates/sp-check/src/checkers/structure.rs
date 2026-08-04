@@ -1041,36 +1041,34 @@ mod tests {
     #[test]
     fn test_new_chapters_ignores_body_text_mentions() {
         // Body text mentioning "•Chapter 2 examines..." should not be flagged
-        let pages = vec![
-            sp_extract::document::ParsedPage {
-                text: String::new(),
-                page_number: 1,
-                width: 612.0,
-                height: 792.0,
-                spans: vec![
-                    TextSpan {
-                        text: "BODYSTART".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 1.0,
-                        bbox: (760.0, 761.0, 500.0, 580.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                    TextSpan {
-                        text: "•Chapter 2 examines youth perspectives".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 12.0,
-                        bbox: (150.0, 162.0, 100.0, 300.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                ],
-                images: vec![],
-                paths: vec![],
-            },
-        ];
+        let pages = vec![sp_extract::document::ParsedPage {
+            text: String::new(),
+            page_number: 1,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                TextSpan {
+                    text: "BODYSTART".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 1.0,
+                    bbox: (760.0, 761.0, 500.0, 580.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                },
+                TextSpan {
+                    text: "•Chapter 2 examines youth perspectives".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 12.0,
+                    bbox: (150.0, 162.0, 100.0, 300.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                },
+            ],
+            images: vec![],
+            paths: vec![],
+        }];
         let doc = Document {
             markdown_text: None,
             raw_text: String::new(),
@@ -1086,42 +1084,44 @@ mod tests {
             pages,
         };
         let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
-        assert_eq!(r.status, Status::Pass, "body text mentions should not trigger");
+        assert_eq!(
+            r.status,
+            Status::Pass,
+            "body text mentions should not trigger"
+        );
     }
 
     #[test]
     fn test_new_chapters_flags_real_midpage_heading() {
         // A real chapter heading that starts mid-page (top > 100) should be flagged
-        let pages = vec![
-            sp_extract::document::ParsedPage {
-                text: String::new(),
-                page_number: 1,
-                width: 612.0,
-                height: 792.0,
-                spans: vec![
-                    TextSpan {
-                        text: "BODYSTART".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 1.0,
-                        bbox: (760.0, 761.0, 500.0, 580.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                    TextSpan {
-                        text: "Chapter 3 Results".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 12.0,
-                        bbox: (150.0, 162.0, 100.0, 300.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                ],
-                images: vec![],
-                paths: vec![],
-            },
-        ];
+        let pages = vec![sp_extract::document::ParsedPage {
+            text: String::new(),
+            page_number: 1,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![
+                TextSpan {
+                    text: "BODYSTART".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 1.0,
+                    bbox: (760.0, 761.0, 500.0, 580.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                },
+                TextSpan {
+                    text: "Chapter 3 Results".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 12.0,
+                    bbox: (150.0, 162.0, 100.0, 300.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                },
+            ],
+            images: vec![],
+            paths: vec![],
+        }];
         let doc = Document {
             markdown_text: None,
             raw_text: String::new(),
@@ -1137,7 +1137,11 @@ mod tests {
             pages,
         };
         let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
-        assert_eq!(r.status, Status::Fail, "mid-page chapter heading should fail");
+        assert_eq!(
+            r.status,
+            Status::Fail,
+            "mid-page chapter heading should fail"
+        );
     }
 
     #[test]
@@ -1366,17 +1370,15 @@ mod tests {
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    TextSpan {
-                        text: "i".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 10.0,
-                        bbox: (740.0, 750.0, 100.0, 120.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                ],
+                spans: vec![TextSpan {
+                    text: "i".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 10.0,
+                    bbox: (740.0, 750.0, 100.0, 120.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                }],
                 images: vec![],
                 paths: vec![],
             },
@@ -1385,17 +1387,15 @@ mod tests {
                 page_number: 2,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    TextSpan {
-                        text: "ii".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 10.0,
-                        bbox: (740.0, 750.0, 100.0, 120.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                ],
+                spans: vec![TextSpan {
+                    text: "ii".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 10.0,
+                    bbox: (740.0, 750.0, 100.0, 120.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                }],
                 images: vec![],
                 paths: vec![],
             },
@@ -1405,17 +1405,15 @@ mod tests {
                 page_number: 3,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    TextSpan {
-                        text: "BODYSTART".to_string(),
-                        font_name: "Times".to_string(),
-                        font_size: 1.0,
-                        bbox: (760.0, 761.0, 500.0, 580.0),
-                        is_bold: false,
-                        is_italic: false,
-                        color: None,
-                    },
-                ],
+                spans: vec![TextSpan {
+                    text: "BODYSTART".to_string(),
+                    font_name: "Times".to_string(),
+                    font_size: 1.0,
+                    bbox: (760.0, 761.0, 500.0, 580.0),
+                    is_bold: false,
+                    is_italic: false,
+                    color: None,
+                }],
                 images: vec![],
                 paths: vec![],
             },
@@ -1436,6 +1434,9 @@ mod tests {
         };
         let sections = std::collections::HashMap::new();
         let start = super::find_body_start(&doc, &sections);
-        assert_eq!(start, 3, "marker on page 3 should be detected as body start");
+        assert_eq!(
+            start, 3,
+            "marker on page 3 should be detected as body start"
+        );
     }
 }

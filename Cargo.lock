@@ -2703,7 +2703,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-check",
- "sp-extract",
  "sp-typst",
  "thiserror 1.0.69",
  "tokio",
