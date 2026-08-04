@@ -180,7 +180,7 @@ fn find_all_sections(doc: &Document) -> HashMap<String, usize> {
                 let is_other = NON_ABSTRACT_HEADINGS
                     .iter()
                     .any(|h| text[..200.min(text.len())].contains(h));
-                if n_spans > 100 && !is_other {
+                if n_spans > 15 && !is_other {
                     sections.insert("abstract".to_string(), page.page_number);
                     break;
                 }
