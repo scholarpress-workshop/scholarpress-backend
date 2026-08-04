@@ -642,15 +642,20 @@ impl Checker for NewChaptersNewPagesChecker {
     }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
+        let sections = find_all_sections(doc);
+        let body_start = find_body_start(doc, &sections);
         let mut violations: Vec<EvidenceItem> = Vec::new();
         for page in &doc.pages {
+            if page.page_number < body_start {
+                continue;
+            }
             for span in &page.spans {
                 let (top, _bottom, _x0, _x1) = span.bbox;
                 if !(36.0..=200.0).contains(&top) {
                     continue;
                 }
                 let low = span.text.to_lowercase();
-                if (low.contains("chapter ") || low.contains("appendix ")) && top > 100.0 {
+                if (low.starts_with("chapter ") || low.starts_with("appendix ")) && top > 100.0 {
                     violations.push(EvidenceItem {
                         page: page.page_number,
                         bbox: Some(span.bbox),
@@ -1031,6 +1036,108 @@ mod tests {
         ]);
         let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_new_chapters_ignores_body_text_mentions() {
+        // Body text mentioning "•Chapter 2 examines..." should not be flagged
+        let pages = vec![
+            sp_extract::document::ParsedPage {
+                text: String::new(),
+                page_number: 1,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    TextSpan {
+                        text: "BODYSTART".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 1.0,
+                        bbox: (760.0, 761.0, 500.0, 580.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                    TextSpan {
+                        text: "•Chapter 2 examines youth perspectives".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 12.0,
+                        bbox: (150.0, 162.0, 100.0, 300.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                ],
+                images: vec![],
+                paths: vec![],
+            },
+        ];
+        let doc = Document {
+            markdown_text: None,
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages,
+        };
+        let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass, "body text mentions should not trigger");
+    }
+
+    #[test]
+    fn test_new_chapters_flags_real_midpage_heading() {
+        // A real chapter heading that starts mid-page (top > 100) should be flagged
+        let pages = vec![
+            sp_extract::document::ParsedPage {
+                text: String::new(),
+                page_number: 1,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    TextSpan {
+                        text: "BODYSTART".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 1.0,
+                        bbox: (760.0, 761.0, 500.0, 580.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                    TextSpan {
+                        text: "Chapter 3 Results".to_string(),
+                        font_name: "Times".to_string(),
+                        font_size: 12.0,
+                        bbox: (150.0, 162.0, 100.0, 300.0),
+                        is_bold: false,
+                        is_italic: false,
+                        color: None,
+                    },
+                ],
+                images: vec![],
+                paths: vec![],
+            },
+        ];
+        let doc = Document {
+            markdown_text: None,
+            raw_text: String::new(),
+            paragraphs: vec![],
+            headings: vec![],
+            metadata: sp_extract::document::ParsedMetadata {
+                title: None,
+                author: None,
+                page_count: 1,
+                page_count_estimated: false,
+                detected_fonts: vec![],
+            },
+            pages,
+        };
+        let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail, "mid-page chapter heading should fail");
     }
 
     #[test]
