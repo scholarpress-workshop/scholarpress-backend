@@ -34,6 +34,7 @@ pub struct CompileTypstParams {
 pub struct CheckPdfParams {
     pub workspace: PathBuf,
     pub pdf_path: PathBuf,
+    pub check_ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -129,15 +130,20 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Run formatting checks against the workspace's spec.yaml. Always uses the workspace spec. Returns a list of check outcomes (id, status, message, page)."
+        description = "Run formatting checks against the workspace's spec.yaml. Always uses the workspace spec. Returns a list of check outcomes (id, status, message, page, source_hints). Optionally filter to specific check IDs via check_ids param."
     )]
     async fn check_pdf(
         &self,
         params: Parameters<CheckPdfParams>,
     ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let outcomes = workspace::check_pdf(&self.config, &p.workspace, &p.pdf_path, None)
-            .map_err(Self::err)?;
+        let outcomes = workspace::check_pdf(
+            &self.config,
+            &p.workspace,
+            &p.pdf_path,
+            p.check_ids.as_deref(),
+        )
+        .map_err(Self::err)?;
         let json = serde_json::to_string(&outcomes)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
@@ -203,7 +209,7 @@ impl rmcp::handler::server::ServerHandler for ScholarPressService {
         ServerInfo::new(capabilities)
             .with_server_info(server_info)
             .with_instructions(
-                "ScholarPress: catalog + Typst template workspace tools. Use list_profiles to discover profiles, create_workspace to fork one into a scratch dir, then edit, compile_typst + check_pdf.\n\nYOUR ROLE — Intelligent Intermediary:\n\nPandoc produces a best-effort starting point from messy DOCX inputs. You are the intelligent intermediary between raw conversion and clean Typst. Expect artifacts:\n- #underline[...] for headings instead of Typst heading syntax\n- #strong[...] for bold instead of *bold*\n- Mixed dash styles (--- vs --)\n- Inconsistent spacing and formatting\n\nNo rigid pre-processing pipeline exists — every author's DOCX formatting is different, and that's why an LLM is in the loop. You are expected to handle these artifacts intelligently.\n\nWORKFLOW — Map–Scaffold–Migrate–Verify:\n\nInterface — After create_workspace, call interface_doc to see every section function's signature, parameter types, entry data shapes (dict vs tuple vs raw content), and calling examples. This eliminates guesswork about which functions expect dicts, tuples, or content.\n\nMap — pandoc_convert(format: \"ast\") to survey structure, then scan pandoc_convert(format: \"typst\") output for Table of Contents. AST headings are unreliable (most DOCX uses direct formatting, not heading styles). The TOC is the source of truth for section count, order, and boundaries.\n\nScaffold — Create entry file with sections wired per template.typ comments (NAMED parameters, import pattern, chapter per-file convention).\n\nMigrate — One section at a time from the TOC: keyword-match the section title in pandoc typst output to find start boundary, keyword-match next section title for end boundary, slice the chunk, copy into the corresponding template section function. Run check_typst/format_typst on each section file, then compile_typst to catch errors early.\n\nVerify — compile_typst + check_pdf per milestone. Iterate incrementally.",
+                "ScholarPress: catalog + Typst template workspace tools. Use list_profiles to discover profiles, create_workspace to fork one into a scratch dir, then edit, compile_typst + check_pdf.\n\nYOUR ROLE — Intelligent Intermediary:\n\nPandoc produces a best-effort starting point from messy DOCX inputs. You are the intelligent intermediary between raw conversion and clean Typst. Expect artifacts:\n- #underline[...] for headings instead of Typst heading syntax\n- #strong[...] for bold instead of *bold*\n- Mixed dash styles (--- vs --)\n- Inconsistent spacing and formatting\n\nNo rigid pre-processing pipeline exists — every author's DOCX formatting is different, and that's why an LLM is in the loop. You are expected to handle these artifacts intelligently.\n\nWORKFLOW — Map–Scaffold–Migrate–Verify:\n\nInterface — After create_workspace, call interface_doc to see every section function's signature, parameter types, entry data shapes (dict vs tuple vs raw content), and calling examples. This eliminates guesswork about which functions expect dicts, tuples, or content.\n\nMap — pandoc_convert(format: \"ast\") to survey structure, then scan pandoc_convert(format: \"typst\") output for Table of Contents. AST headings are unreliable (most DOCX uses direct formatting, not heading styles). The TOC is the source of truth for section count, order, and boundaries.\n\nScaffold — Create entry file with sections wired per template.typ comments (NAMED parameters, import pattern, chapter per-file convention).\n\nMigrate — One section at a time from the TOC: keyword-match the section title in pandoc typst output to find start boundary, keyword-match next section title for end boundary, slice the chunk, copy into the corresponding template section function. Run check_typst/format_typst on each section file, then compile_typst to catch errors early.\n\nVerify — compile_typst + check_pdf per milestone. Iterate incrementally.\n\nDebug — When check_pdf reports failures, use check_ids to isolate: source_hints on each violation suggest likely culprit files. To confirm, create a minimal .typ file in the workspace that imports only the suspect section function from template.typ, sets #set page(...) matching the spec, and calls the section. Then: compile_typst(isolate.typ) -> check_pdf(isolate.pdf, check_ids: [\"the_failing_check_id\"]). If the check still fails -> issue is in the template section or styles. If it passes -> issue is in how entry.typ wires or composes the section.",
             )
     }
 }
