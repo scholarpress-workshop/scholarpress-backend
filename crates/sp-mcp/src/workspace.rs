@@ -326,6 +326,7 @@ pub struct CheckOutcome {
     pub message: String,
     pub page: Option<usize>,
     pub evidence: Vec<EvidenceDetail>,
+    pub source_hints: Vec<String>,
 }
 
 pub fn check_pdf(
@@ -365,22 +366,82 @@ pub fn check_pdf(
     let outcomes = report
         .results
         .into_iter()
-        .map(|r| CheckOutcome {
-            id: r.check_id,
-            status: r.status.as_str().to_string(),
-            message: r.detail,
-            page: r.evidence.first().map(|e| e.page),
-            evidence: r
-                .evidence
-                .into_iter()
-                .map(|e| EvidenceDetail {
-                    page: e.page,
-                    excerpt: e.excerpt,
-                })
-                .collect(),
+        .map(|r| {
+            let hints = source_hints(&r.check_id);
+            CheckOutcome {
+                id: r.check_id,
+                status: r.status.as_str().to_string(),
+                message: r.detail,
+                page: r.evidence.first().map(|e| e.page),
+                evidence: r
+                    .evidence
+                    .into_iter()
+                    .map(|e| EvidenceDetail {
+                        page: e.page,
+                        excerpt: e.excerpt,
+                    })
+                    .collect(),
+                source_hints: hints,
+            }
         })
         .collect();
     Ok(outcomes)
+}
+
+// ponytail: heuristic source hints per check ID. Checks don't know which
+// Typst files produce a given PDF page, so we map checker IDs to likely
+// source files based on the workspace convention (entry.typ has #set page,
+// chapters/ has body content, template/ has section definitions and styles).
+// Hints are advisory — the real fix may be in a different file.
+fn source_hints(check_id: &str) -> Vec<String> {
+    fn hint(h: &str) -> Vec<String> {
+        vec![h.to_string()]
+    }
+    fn hints(hs: &[&str]) -> Vec<String> {
+        hs.iter().map(|h| h.to_string()).collect()
+    }
+    match check_id {
+        "global_margins" => hint("entry.typ"),
+        "margin_symmetry" => hint("entry.typ"),
+        "font_size_consistent" => hints(&["chapters/", "template/template.typ"]),
+        "font_family_consistent" => hints(&["template/styles.typ", "template/template.typ"]),
+        "justification_consistent" => hint("template/template.typ"),
+        "front_matter_presence" => hint("entry.typ"),
+        "front_matter_order" => hint("entry.typ"),
+        "title_clause_wording" => hint("chapters/title-page.typ"),
+        "committee_chair_first" => hint("entry.typ"),
+        "toc_chapter_title_parity" => hints(&["chapters/", "entry.typ"]),
+        "title_page_no_bold" => hint("chapters/title-page.typ"),
+        "title_page_no_page_number" => hint("template/template.typ"),
+        "title_page_all_caps" => hints(&["chapters/title-page.typ", "entry.typ"]),
+        "acceptance_page_page_number_ii" => hint("template/template.typ"),
+        "clause_spacing" => hint("chapters/title-page.typ"),
+        "title_page_clause_centered" => hint("chapters/title-page.typ"),
+        "title_page_clause_spacing" => hint("chapters/title-page.typ"),
+        "copyright_page_format" => hint("entry.typ"),
+        "page_numbers_format" => hint("entry.typ"),
+        "headings_consistent" => hints(&["chapters/", "template/styles.typ"]),
+        "footnotes_font_consistent" => hint("template/styles.typ"),
+        "footnotes_spacing" => hint("template/styles.typ"),
+        "new_chapters_new_pages" => hints(&["chapters/", "template/template.typ"]),
+        "tables_figures_legend_font" => hint("chapters/"),
+        "hyperlinks_format" => hint("chapters/"),
+        "references_font_consistent" => hint("template/template.typ"),
+        "references_heading_format" => hint("template/template.typ"),
+        "references_spacing" => hint("template/template.typ"),
+        "cv_heading_format" => hint("template/template.typ"),
+        "cv_name_position" => hint("entry.typ"),
+        "cv_no_credentials" => hint("chapters/cv.typ"),
+        "cv_no_page_number" => hint("template/template.typ"),
+        "abstract_text_centered" => hint("chapters/abstract.typ"),
+        "abstract_word_count" => hint("chapters/abstract.typ"),
+        "abstract_title_format" => hint("chapters/abstract.typ"),
+        "toc_page_numbers_aligned" => hints(&["entry.typ", "template/template.typ"]),
+        "toc_no_overhang" => hint("entry.typ"),
+        "toc_cv_no_dots" => hint("entry.typ"),
+        "toc_spacing" => hint("entry.typ"),
+        _ => Vec::new(),
+    }
 }
 
 pub fn pandoc_convert(
