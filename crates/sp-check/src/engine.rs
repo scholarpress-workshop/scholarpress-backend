@@ -66,3 +66,98 @@ pub fn run_checks(
 
     Ok(results)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::spec::InstitutionSpec;
+
+    fn minimal_spec() -> InstitutionSpec {
+        let yaml = r#"
+institution: Test
+source_revision: "1"
+document_structure:
+  front_matter: []
+  body:
+    - id: body
+      required: true
+  end_matter: []
+checks:
+  - id: test_margins
+    category: layout
+    checker: margins
+    target:
+      scope: all_pages
+    automatable: false
+    review_hint: "check margins"
+  - id: test_font_size
+    category: typography
+    checker: font_size
+    target:
+      scope: all_pages
+    automatable: false
+    review_hint: "check font size"
+  - id: test_justification
+    category: typography
+    checker: justification
+    target:
+      scope: all_pages
+    automatable: false
+    review_hint: "check justification"
+"#;
+        serde_yaml::from_str(yaml).unwrap()
+    }
+
+    fn minimal_pdf(dir: &std::path::Path) -> std::path::PathBuf {
+        let typ = dir.join("minimal.typ");
+        std::fs::write(&typ, "= Hello\n").unwrap();
+        let out = dir.join("minimal.pdf");
+        let status = std::process::Command::new("typst")
+            .arg("compile")
+            .arg(&typ)
+            .arg(&out)
+            .output();
+        match status {
+            Ok(o) if o.status.success() => out,
+            _ => {
+                eprintln!("SKIP: typst not on PATH");
+                dir.join("missing.pdf")
+            }
+        }
+    }
+
+    #[test]
+    fn run_checks_filters_by_check_ids() {
+        let dir = std::env::temp_dir().join(format!("sp-check-eng-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pdf = minimal_pdf(&dir);
+        if !pdf.is_file() {
+            return;
+        }
+        let spec = minimal_spec();
+        let options = CheckOptions {
+            check_ids: Some(vec!["test_margins".into(), "test_justification".into()]),
+            ..Default::default()
+        };
+        let results = run_checks(&spec, &pdf, &options).unwrap();
+        let ids: Vec<&str> = results.iter().map(|r| r.check_id.as_str()).collect();
+        assert_eq!(ids, vec!["test_margins", "test_justification"]);
+    }
+
+    #[test]
+    fn run_checks_unknown_check_id_returns_empty() {
+        let dir = std::env::temp_dir().join(format!("sp-check-eng2-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pdf = minimal_pdf(&dir);
+        if !pdf.is_file() {
+            return;
+        }
+        let spec = minimal_spec();
+        let options = CheckOptions {
+            check_ids: Some(vec!["nonexistent".into()]),
+            ..Default::default()
+        };
+        let results = run_checks(&spec, &pdf, &options).unwrap();
+        assert!(results.is_empty());
+    }
+}

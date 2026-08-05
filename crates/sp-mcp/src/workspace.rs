@@ -812,6 +812,48 @@ mod tests {
     }
 
     #[test]
+    fn check_pdf_filter_by_check_ids() {
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let catalog = (0..6)
+            .map(|i| {
+                let mut p = manifest_dir.clone();
+                for _ in 0..=i {
+                    p.pop();
+                }
+                p.join("scholarpress-catalog")
+            })
+            .find(|p| p.is_dir());
+        let catalog = match catalog {
+            Some(p) => p,
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found");
+                return;
+            }
+        };
+        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.pdf");
+        if !baseline.is_file() {
+            eprintln!("SKIP: IU baseline fixture not present (run bash compile.sh)");
+            return;
+        }
+
+        let ws = local_tempdir();
+        fs::write(
+            ws.join("spec.yaml"),
+            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+        )
+        .unwrap();
+
+        let cfg = Config::new(catalog, PathBuf::from("/w"));
+        let ids: Vec<String> = vec!["global_margins".into(), "margin_symmetry".into()];
+        let outcomes = check_pdf(&cfg, &ws, &baseline, Some(&ids)).unwrap();
+        assert!(!outcomes.is_empty(), "expected at least one check");
+        let outcome_ids: Vec<&str> = outcomes.iter().map(|o| o.id.as_str()).collect();
+        assert!(outcome_ids.contains(&"global_margins"));
+        assert!(outcome_ids.contains(&"margin_symmetry"));
+        assert!(!outcome_ids.contains(&"font_size_consistent"));
+    }
+
+    #[test]
     fn check_typst_catches_syntax_error_or_skips_if_no_typstyle() {
         let ws = local_tempdir();
         fs::write(ws.join("bad.typ"), "= Hello\n$17 million\n").unwrap();
