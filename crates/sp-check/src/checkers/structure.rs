@@ -324,6 +324,13 @@ impl Checker for SectionOrderChecker {
                 evidence: violations,
             }
         } else {
+            // ponytail: order checker only validates ordering among detected
+            // sections — it does not require all expected sections to be
+            // present. SectionPresenceChecker handles completeness. The two
+            // checkers are intentionally atomic so they don't depend on each
+            // other's output. Consequence: order can PASS while presence FAILS
+            // (e.g., abstract missing but remaining sections ordered correctly).
+            // Accepted behavior.
             let names: Vec<String> = found_pages
                 .iter()
                 .map(|(n, p)| format!("{} (p{})", n, p))
