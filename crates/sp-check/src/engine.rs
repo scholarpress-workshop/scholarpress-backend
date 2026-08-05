@@ -5,7 +5,7 @@ use std::path::Path;
 
 #[derive(Default)]
 pub struct CheckOptions {
-    pub check_id: Option<String>,
+    pub check_ids: Option<Vec<String>>,
     pub category: Option<String>,
 }
 
@@ -19,8 +19,8 @@ pub fn run_checks(
     let mut results: Vec<CheckResult> = Vec::new();
 
     for check_def in &spec.checks {
-        if let Some(ref filter_id) = options.check_id {
-            if check_def.id != *filter_id {
+        if let Some(ref ids) = options.check_ids {
+            if !ids.is_empty() && !ids.contains(&check_def.id) {
                 continue;
             }
         }

@@ -70,7 +70,7 @@ pub fn run(args: &CheckArgs) {
     };
 
     let options = sp_check::engine::CheckOptions {
-        check_id: args.check.clone(),
+        check_ids: args.check.clone().map(|id| vec![id]),
         category: args.category.clone(),
     };
 
