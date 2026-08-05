@@ -136,8 +136,8 @@ impl ScholarPressService {
         params: Parameters<CheckPdfParams>,
     ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let outcomes =
-            workspace::check_pdf(&self.config, &p.workspace, &p.pdf_path).map_err(Self::err)?;
+        let outcomes = workspace::check_pdf(&self.config, &p.workspace, &p.pdf_path, None)
+            .map_err(Self::err)?;
         let json = serde_json::to_string(&outcomes)
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?;
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))

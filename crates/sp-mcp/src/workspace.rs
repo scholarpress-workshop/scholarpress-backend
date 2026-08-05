@@ -333,6 +333,7 @@ pub fn check_pdf(
     _config: &Config,
     workspace: &Path,
     pdf_path: &Path,
+    check_ids: Option<&[String]>,
 ) -> Result<Vec<CheckOutcome>, SpMcpError> {
     if !workspace.is_dir() {
         return Err(SpMcpError::WorkspaceNotFound(
@@ -358,7 +359,10 @@ pub fn check_pdf(
 
     let spec = check::spec::load_spec(&spec_path)
         .map_err(|e| SpMcpError::Check(format!("failed to load spec: {}", e)))?;
-    let options = check::engine::CheckOptions::default();
+    let options = check::engine::CheckOptions {
+        check_ids: check_ids.map(|ids| ids.to_vec()),
+        ..Default::default()
+    };
     let results = check::engine::run_checks(&spec, &pdf_abs, &options)
         .map_err(|e| SpMcpError::Check(format!("check run failed: {}", e)))?;
     let report = check::report::build_report(results);
@@ -741,7 +745,7 @@ mod tests {
         .unwrap();
 
         let cfg = Config::new(catalog, PathBuf::from("/w"));
-        let outcomes = check_pdf(&cfg, &ws, &baseline).unwrap();
+        let outcomes = check_pdf(&cfg, &ws, &baseline, None).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check result");
     }
 
@@ -778,7 +782,7 @@ mod tests {
         .unwrap();
 
         let cfg = Config::new(catalog, PathBuf::from("/w"));
-        let outcomes = check_pdf(&cfg, &ws, &golden).unwrap();
+        let outcomes = check_pdf(&cfg, &ws, &golden, None).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check result");
 
         // Verify structural checkers found their targets (not ERROR)
