@@ -2,7 +2,7 @@
 
 ## Context
 
-Feedback from the first end-to-end MCP test (2026-08-04) identified that when
+Feedback from an end-to-end MCP test (2026-08-04) identified that when
 `check_pdf` reports failures, the agent has no way to determine which source
 file caused the violation. The agent iterated blindly — editing
 `template.typ`, `styles.typ`, and `spec.yaml` — when the real fix was in

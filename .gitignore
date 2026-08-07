@@ -4,3 +4,4 @@ target/
 .tmp-*
 .DS_Store
 .worktrees/
+.serena/
