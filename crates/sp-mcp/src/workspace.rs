@@ -241,76 +241,6 @@ pub fn compile_typst(
     Ok(out_path)
 }
 
-pub fn check_typst(workspace: &Path, file_path: &Path) -> Result<String, SpMcpError> {
-    if !workspace.is_dir() {
-        return Err(SpMcpError::Compilation(format!(
-            "workspace not found: {}",
-            workspace.display()
-        )));
-    }
-    let file_abs = if file_path.is_absolute() {
-        file_path.to_path_buf()
-    } else {
-        workspace.join(file_path)
-    };
-    if !file_abs.is_file() {
-        return Err(SpMcpError::Compilation(format!(
-            "file not found: {}",
-            file_abs.display()
-        )));
-    }
-
-    let output = std::process::Command::new("typstyle")
-        .arg("--check")
-        .arg(&file_abs)
-        .current_dir(workspace)
-        .output()
-        .map_err(|e| SpMcpError::Compilation(format!("failed to run typstyle: {}", e)))?;
-
-    if output.status.success() {
-        Ok("ok".to_string())
-    } else {
-        Ok("needs_format".to_string())
-    }
-}
-
-pub fn format_typst(workspace: &Path, file_path: &Path) -> Result<String, SpMcpError> {
-    if !workspace.is_dir() {
-        return Err(SpMcpError::Compilation(format!(
-            "workspace not found: {}",
-            workspace.display()
-        )));
-    }
-    let file_abs = if file_path.is_absolute() {
-        file_path.to_path_buf()
-    } else {
-        workspace.join(file_path)
-    };
-    if !file_abs.is_file() {
-        return Err(SpMcpError::Compilation(format!(
-            "file not found: {}",
-            file_abs.display()
-        )));
-    }
-
-    let output = std::process::Command::new("typstyle")
-        .arg("-i")
-        .arg(&file_abs)
-        .current_dir(workspace)
-        .output()
-        .map_err(|e| SpMcpError::Compilation(format!("failed to run typstyle: {}", e)))?;
-
-    if output.status.success() {
-        Ok(file_abs.display().to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(SpMcpError::Compilation(format!(
-            "typstyle failed: {}",
-            stderr
-        )))
-    }
-}
-
 use sp_check as check;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -599,9 +529,13 @@ mod tests {
     #[test]
     fn list_profiles_finds_scoped_profiles() {
         let catalog = local_tempdir();
-        let iu = catalog.join("institutions").join("iu");
+        let iu = catalog.join("institutions").join("iu-indianapolis");
         fs::create_dir_all(iu.join("template")).unwrap();
-        fs::write(iu.join("spec.yaml"), "institution: Indiana University\n").unwrap();
+        fs::write(
+            iu.join("spec.yaml"),
+            "institution: Indiana University Indianapolis\n",
+        )
+        .unwrap();
         fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
 
         let arxiv = catalog.join("servers").join("arxiv");
@@ -617,17 +551,20 @@ mod tests {
         let cfg = Config::new(catalog.clone(), PathBuf::from("/w"));
         let profiles = list_profiles(&cfg).unwrap();
         let ids: Vec<&str> = profiles.iter().map(|p| p.id.as_str()).collect();
-        assert_eq!(ids, vec!["institutions/iu", "servers/arxiv"]);
+        assert_eq!(ids, vec!["institutions/iu-indianapolis", "servers/arxiv"]);
 
-        let iu_info = profiles.iter().find(|p| p.id == "institutions/iu").unwrap();
+        let iu_info = profiles
+            .iter()
+            .find(|p| p.id == "institutions/iu-indianapolis")
+            .unwrap();
         assert_eq!(iu_info.scope, "institutions");
-        assert_eq!(iu_info.name, "Indiana University");
+        assert_eq!(iu_info.name, "Indiana University Indianapolis");
     }
 
     #[test]
     fn create_workspace_copies_spec_and_template() {
         let catalog = local_tempdir();
-        let iu = catalog.join("institutions").join("iu");
+        let iu = catalog.join("institutions").join("iu-indianapolis");
         fs::create_dir_all(iu.join("template").join("sections")).unwrap();
         fs::write(iu.join("spec.yaml"), "institution: IU\n").unwrap();
         fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
@@ -643,7 +580,7 @@ mod tests {
         let ws_root = local_tempdir();
         let cfg = Config::new(catalog.clone(), ws_root.clone());
 
-        let path = create_workspace(&cfg, "iu-job-1", "institutions/iu").unwrap();
+        let path = create_workspace(&cfg, "iu-job-1", "institutions/iu-indianapolis").unwrap();
         assert!(path.is_dir());
         assert!(path.join("spec.yaml").is_file());
         assert!(path.join("template").join("template.typ").is_file());
@@ -661,15 +598,15 @@ mod tests {
     #[test]
     fn create_workspace_rejects_bad_name() {
         let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
-        assert!(create_workspace(&cfg, "../escape", "institutions/iu").is_err());
-        assert!(create_workspace(&cfg, "a/b", "institutions/iu").is_err());
-        assert!(create_workspace(&cfg, "", "institutions/iu").is_err());
+        assert!(create_workspace(&cfg, "../escape", "institutions/iu-indianapolis").is_err());
+        assert!(create_workspace(&cfg, "a/b", "institutions/iu-indianapolis").is_err());
+        assert!(create_workspace(&cfg, "", "institutions/iu-indianapolis").is_err());
     }
 
     #[test]
     fn create_workspace_unknown_profile_lists_available() {
         let catalog = local_tempdir();
-        let iu = catalog.join("institutions").join("iu");
+        let iu = catalog.join("institutions").join("iu-indianapolis");
         fs::create_dir_all(iu.join("template")).unwrap();
         fs::write(iu.join("spec.yaml"), "institution: IU\n").unwrap();
         fs::write(iu.join("template").join("template.typ"), "= Hi\n").unwrap();
@@ -679,7 +616,7 @@ mod tests {
         match err {
             SpMcpError::ProfileNotFound(id, avail) => {
                 assert_eq!(id, "institutions/missing");
-                assert_eq!(avail, vec!["institutions/iu".to_string()]);
+                assert_eq!(avail, vec!["institutions/iu-indianapolis".to_string()]);
             }
             other => panic!("expected ProfileNotFound, got {:?}", other),
         }
@@ -731,7 +668,7 @@ mod tests {
                 return;
             }
         };
-        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.pdf");
+        let baseline = catalog.join("institutions/iu-indianapolis/tests/fixtures/baseline.pdf");
         if !baseline.is_file() {
             eprintln!("SKIP: IU baseline fixture not present (run bash compile.sh)");
             return;
@@ -740,7 +677,7 @@ mod tests {
         let ws = local_tempdir();
         fs::write(
             ws.join("spec.yaml"),
-            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+            fs::read_to_string(catalog.join("institutions/iu-indianapolis/spec.yaml")).unwrap(),
         )
         .unwrap();
 
@@ -768,7 +705,7 @@ mod tests {
                 return;
             }
         };
-        let golden = catalog.join("institutions/iu/tests/fixtures/golden.pdf");
+        let golden = catalog.join("institutions/iu-indianapolis/tests/fixtures/golden.pdf");
         if !golden.is_file() {
             eprintln!("SKIP: IU golden fixture not present (run compile.sh)");
             return;
@@ -777,7 +714,7 @@ mod tests {
         let ws = local_tempdir();
         fs::write(
             ws.join("spec.yaml"),
-            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+            fs::read_to_string(catalog.join("institutions/iu-indianapolis/spec.yaml")).unwrap(),
         )
         .unwrap();
 
@@ -830,7 +767,7 @@ mod tests {
                 return;
             }
         };
-        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.pdf");
+        let baseline = catalog.join("institutions/iu-indianapolis/tests/fixtures/baseline.pdf");
         if !baseline.is_file() {
             eprintln!("SKIP: IU baseline fixture not present (run bash compile.sh)");
             return;
@@ -839,7 +776,7 @@ mod tests {
         let ws = local_tempdir();
         fs::write(
             ws.join("spec.yaml"),
-            fs::read_to_string(catalog.join("institutions/iu/spec.yaml")).unwrap(),
+            fs::read_to_string(catalog.join("institutions/iu-indianapolis/spec.yaml")).unwrap(),
         )
         .unwrap();
 
@@ -851,50 +788,6 @@ mod tests {
         assert!(outcome_ids.contains(&"global_margins"));
         assert!(outcome_ids.contains(&"margin_symmetry"));
         assert!(!outcome_ids.contains(&"font_size_consistent"));
-    }
-
-    #[test]
-    fn check_typst_catches_syntax_error_or_skips_if_no_typstyle() {
-        let ws = local_tempdir();
-        fs::write(ws.join("bad.typ"), "= Hello\n$17 million\n").unwrap();
-        let result = check_typst(&ws, Path::new("bad.typ"));
-        match result {
-            Ok(status) => {
-                // typstyle on PATH — $ in prose should trigger needs_format
-                assert_eq!(status, "needs_format");
-            }
-            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {
-                // typstyle not on PATH — skip
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    }
-
-    #[test]
-    fn check_typst_clean_file_is_ok_or_skips() {
-        let ws = local_tempdir();
-        fs::write(ws.join("clean.typ"), "= Hello\n\nWorld.\n").unwrap();
-        let result = check_typst(&ws, Path::new("clean.typ"));
-        match result {
-            Ok(status) => assert_eq!(status, "ok"),
-            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {}
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    }
-
-    #[test]
-    fn format_typst_modifies_file_or_skips_if_no_typstyle() {
-        let ws = local_tempdir();
-        fs::write(ws.join("input.typ"), "= Hello\n\n\n  world\n").unwrap();
-        let result = format_typst(&ws, Path::new("input.typ"));
-        match result {
-            Ok(_) => {
-                let formatted = fs::read_to_string(ws.join("input.typ")).unwrap();
-                assert!(!formatted.contains("  world"));
-            }
-            Err(SpMcpError::Compilation(msg)) if msg.contains("typstyle") => {}
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
     }
 
     #[test]
@@ -912,7 +805,7 @@ mod tests {
                 return;
             }
         };
-        let baseline = catalog.join("institutions/iu/tests/fixtures/baseline.docx");
+        let baseline = catalog.join("institutions/iu-indianapolis/tests/fixtures/baseline.docx");
         if !baseline.is_file() {
             eprintln!("SKIP: baseline.docx fixture not present");
             return;

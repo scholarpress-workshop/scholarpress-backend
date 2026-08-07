@@ -1,8 +1,8 @@
 # sp-mcp
 
-Stdio MCP server for the ScholarPress ecosystem. Exposes six tools
-(workspace/profile discovery, document extraction, Typst compilation,
-formatting checks) for use from any MCP-compliant agent harness.
+Stdio MCP server for the ScholarPress ecosystem. Exposes workspace/profile
+discovery, document conversion, Typst compilation, PDF checks, and template
+interface documentation for use from any MCP-compliant agent harness.
 
 ## Requirements
 
@@ -12,11 +12,6 @@ formatting checks) for use from any MCP-compliant agent harness.
   cargo install typst-cli
   # or download from https://github.com/typst/typst/releases
   ```
-- The `typstyle` binary on `PATH` (for `check_typst` and `format_typst`):
-  ```bash
-  cargo install typstyle --locked
-  ```
-
 ## Build
 
 ```bash

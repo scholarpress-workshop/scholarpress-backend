@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_empty_corpus_error() {
         let result = run_calibration(
-            std::path::Path::new("../scholarpress-catalog/institutions/iu/spec.yaml"),
+            std::path::Path::new("../scholarpress-catalog/institutions/iu-indianapolis/spec.yaml"),
             std::path::Path::new("/nonexistent/path"),
         );
         assert!(result.is_err());

@@ -65,13 +65,13 @@ mod tests {
         let path = std::env::var("CATALOG_PATH")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("../scholarpress-catalog"))
-            .join("institutions/iu/spec.yaml");
+            .join("institutions/iu-indianapolis/spec.yaml");
         if !path.exists() {
             eprintln!("Catalog spec not found at {:?}, skipping test", path);
             return;
         }
-        let spec = load_spec(&path).expect("Should load iu.yaml");
-        assert_eq!(spec.institution, "Indiana University");
+        let spec = load_spec(&path).expect("Should load iu-indianapolis.yaml");
+        assert_eq!(spec.institution, "Indiana University Indianapolis");
         assert_eq!(spec.source_revision, "September 2025");
         assert!(!spec.checks.is_empty());
         assert_eq!(spec.checks[0].id, "global_margins");
