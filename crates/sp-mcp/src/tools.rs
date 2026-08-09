@@ -145,8 +145,8 @@ impl ScholarPressService {
         params: Parameters<PandocConvertParams>,
     ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let out =
-            workspace::pandoc_convert(&p.file_path, &p.format, &p.workspace).map_err(Self::err)?;
+        let out = workspace::pandoc_convert(&self.config, &p.file_path, &p.format, &p.workspace)
+            .map_err(Self::err)?;
         Ok(CallToolResult::success(vec![ContentBlock::text(
             out.display().to_string(),
         )]))
@@ -160,7 +160,7 @@ impl ScholarPressService {
         params: Parameters<InterfaceDocParams>,
     ) -> Result<CallToolResult, McpError> {
         let p = params.0;
-        let doc = workspace::interface_doc(&p.workspace).map_err(Self::err)?;
+        let doc = workspace::interface_doc(&self.config, &p.workspace).map_err(Self::err)?;
         Ok(CallToolResult::success(vec![ContentBlock::text(doc)]))
     }
 }

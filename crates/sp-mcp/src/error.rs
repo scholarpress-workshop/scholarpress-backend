@@ -17,6 +17,9 @@ pub enum SpMcpError {
     #[error("workspace {0} already exists")]
     WorkspaceExists(PathBuf),
 
+    #[error("path boundary violation: {0}")]
+    PathViolation(String),
+
     #[error("invalid workspace name {0:?} (must be non-empty, no '/' or '..')")]
     BadWorkspaceName(String),
 

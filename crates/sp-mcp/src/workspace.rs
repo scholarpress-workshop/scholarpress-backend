@@ -129,7 +129,26 @@ pub fn create_workspace(
 ) -> Result<PathBuf, SpMcpError> {
     validate_name(name)?;
 
-    let profile_dir = config.catalog_path.join(profile_id);
+    let catalog_root = canonical_root(&config.catalog_path, "catalog root")?;
+    let profile_rel = Path::new(profile_id);
+    if profile_rel.is_absolute()
+        || profile_rel
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err(SpMcpError::PathViolation(format!(
+            "catalog profile {profile_id:?} is not a relative profile ID"
+        )));
+    }
+    let profile_candidate = catalog_root.join(profile_rel);
+    if !profile_candidate.is_dir() {
+        let available: Vec<String> = list_profiles(config)?.into_iter().map(|p| p.id).collect();
+        return Err(SpMcpError::ProfileNotFound(
+            profile_id.to_string(),
+            available,
+        ));
+    }
+    let profile_dir = existing_under(&catalog_root, profile_rel, "catalog profile")?;
     if !profile_dir.is_dir() {
         let available: Vec<String> = list_profiles(config)?.into_iter().map(|p| p.id).collect();
         return Err(SpMcpError::ProfileNotFound(
@@ -141,7 +160,9 @@ pub fn create_workspace(
         return Err(SpMcpError::SpecMissing(profile_dir.join("spec.yaml")));
     }
 
-    let target = config.workspace_root.join(name);
+    std::fs::create_dir_all(&config.workspace_root)?;
+    let workspace_root = canonical_root(&config.workspace_root, "workspace root")?;
+    let target = workspace_root.join(name);
     if target.exists() {
         return Err(SpMcpError::WorkspaceExists(target));
     }
@@ -155,6 +176,65 @@ pub fn create_workspace(
     }
 
     Ok(target)
+}
+
+fn canonical_root(path: &Path, label: &str) -> Result<PathBuf, SpMcpError> {
+    std::fs::canonicalize(path).map_err(|error| {
+        SpMcpError::PathViolation(format!(
+            "{label} {} is unavailable: {error}",
+            path.display()
+        ))
+    })
+}
+
+fn resolve_workspace(config: &Config, workspace: &Path) -> Result<PathBuf, SpMcpError> {
+    let root = canonical_root(&config.workspace_root, "workspace root")?;
+    existing_under(&root, workspace, "workspace path")
+}
+
+fn existing_under(root: &Path, path: &Path, label: &str) -> Result<PathBuf, SpMcpError> {
+    let candidate = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    };
+    let resolved = std::fs::canonicalize(&candidate).map_err(|error| {
+        SpMcpError::PathViolation(format!(
+            "{label} {} is unavailable: {error}",
+            candidate.display()
+        ))
+    })?;
+    if !resolved.starts_with(root) {
+        return Err(SpMcpError::PathViolation(format!(
+            "{label} {} is outside {}",
+            candidate.display(),
+            root.display()
+        )));
+    }
+    Ok(resolved)
+}
+
+fn output_under(root: &Path, path: &Path, label: &str) -> Result<PathBuf, SpMcpError> {
+    let candidate = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    };
+    let parent = candidate.parent().ok_or_else(|| {
+        SpMcpError::PathViolation(format!("{label} {} has no parent", candidate.display()))
+    })?;
+    let resolved_parent = existing_under(root, parent, label)?;
+    let resolved = resolved_parent.join(candidate.file_name().ok_or_else(|| {
+        SpMcpError::PathViolation(format!("{label} {} has no filename", candidate.display()))
+    })?);
+    if !resolved.starts_with(root) {
+        return Err(SpMcpError::PathViolation(format!(
+            "{label} {} is outside {}",
+            candidate.display(),
+            root.display()
+        )));
+    }
+    Ok(resolved)
 }
 
 fn validate_name(name: &str) -> Result<(), SpMcpError> {
@@ -202,13 +282,8 @@ pub fn compile_typst(
     entry_path: &Path,
     out_name: Option<&str>,
 ) -> Result<PathBuf, SpMcpError> {
-    if !workspace.is_dir() {
-        return Err(SpMcpError::WorkspaceNotFound(
-            workspace.display().to_string(),
-            config.workspace_root.clone(),
-        ));
-    }
-    let entry_abs = workspace.join(entry_path);
+    let workspace = resolve_workspace(config, workspace)?;
+    let entry_abs = existing_under(&workspace, entry_path, "entry path")?;
     if !entry_abs.is_file() {
         return Err(SpMcpError::Compilation(format!(
             "entry file not found: {}",
@@ -224,7 +299,7 @@ pub fn compile_typst(
     // needed. A separate dry_run tool was considered but rejected because it
     // would double LLM round-trips (3s per turn) to save ~50ms of typst compile
     // time. See sp-typst/src/lib.rs for related comment.
-    let bytes = typst::compile(&source, Some(workspace))
+    let bytes = typst::compile(&source, Some(&workspace))
         .map_err(|e| SpMcpError::Compilation(e.to_string()))?;
 
     let stem = entry_path
@@ -235,8 +310,10 @@ pub fn compile_typst(
         .map(String::from)
         .unwrap_or_else(|| format!("{}.pdf", stem));
 
-    std::fs::create_dir_all(workspace.join("out"))?;
-    let out_path = workspace.join("out").join(&name);
+    let out_dir = workspace.join("out");
+    std::fs::create_dir_all(&out_dir)?;
+    let out_root = canonical_root(&out_dir, "output directory")?;
+    let out_path = output_under(&out_root, Path::new(&name), "output path")?;
     std::fs::write(&out_path, bytes)?;
     Ok(out_path)
 }
@@ -260,26 +337,17 @@ pub struct CheckOutcome {
 }
 
 pub fn check_pdf(
-    _config: &Config,
+    config: &Config,
     workspace: &Path,
     pdf_path: &Path,
     check_ids: Option<&[String]>,
 ) -> Result<Vec<CheckOutcome>, SpMcpError> {
-    if !workspace.is_dir() {
-        return Err(SpMcpError::WorkspaceNotFound(
-            workspace.display().to_string(),
-            workspace.to_path_buf(),
-        ));
-    }
+    let workspace = resolve_workspace(config, workspace)?;
     let spec_path = workspace.join("spec.yaml");
     if !spec_path.is_file() {
         return Err(SpMcpError::SpecMissing(spec_path));
     }
-    let pdf_abs = if pdf_path.is_absolute() {
-        pdf_path.to_path_buf()
-    } else {
-        workspace.join(pdf_path)
-    };
+    let pdf_abs = existing_under(&workspace, pdf_path, "pdf path")?;
     if !pdf_abs.is_file() {
         return Err(SpMcpError::Check(format!(
             "pdf not found: {}",
@@ -379,10 +447,13 @@ fn source_hints(check_id: &str) -> Vec<String> {
 }
 
 pub fn pandoc_convert(
+    config: &Config,
     file_path: &Path,
     format: &str,
     workspace: &Path,
 ) -> Result<PathBuf, SpMcpError> {
+    let workspace = resolve_workspace(config, workspace)?;
+    let file_path = existing_under(&workspace, file_path, "DOCX input")?;
     if !file_path.is_file() {
         return Err(SpMcpError::Conversion(format!(
             "file not found: {}",
@@ -420,8 +491,10 @@ pub fn pandoc_convert(
     let out_ext = if format == "ast" { "json" } else { "typst" };
     let out_name = format!("{stem}.{out_ext}");
 
-    std::fs::create_dir_all(workspace.join("out"))?;
-    let out_path = workspace.join("out").join(&out_name);
+    let out_dir = workspace.join("out");
+    std::fs::create_dir_all(&out_dir)?;
+    let out_root = canonical_root(&out_dir, "output directory")?;
+    let out_path = output_under(&out_root, Path::new(&out_name), "output path")?;
 
     let output = std::process::Command::new("pandoc")
         .arg(file_path)
@@ -448,13 +521,8 @@ pub fn pandoc_convert(
     Ok(out_path)
 }
 
-pub fn interface_doc(workspace: &Path) -> Result<String, SpMcpError> {
-    if !workspace.is_dir() {
-        return Err(SpMcpError::WorkspaceNotFound(
-            workspace.display().to_string(),
-            workspace.to_path_buf(),
-        ));
-    }
+pub fn interface_doc(config: &Config, workspace: &Path) -> Result<String, SpMcpError> {
+    let workspace = resolve_workspace(config, workspace)?;
     let ref_path = workspace.join("template").join("REFERENCE.json");
     if !ref_path.is_file() {
         return Err(SpMcpError::Compilation(format!(
@@ -627,7 +695,7 @@ mod tests {
         let ws = local_tempdir();
         let tmpl = ws.join("template.typ");
         fs::write(&tmpl, "= Hello, world!\n").unwrap();
-        let cfg = Config::new(PathBuf::from("/c"), PathBuf::from("/w"));
+        let cfg = Config::new(PathBuf::from("/c"), ws.parent().unwrap().to_path_buf());
 
         let result = compile_typst(&cfg, &ws, Path::new("template.typ"), None);
         match result {
@@ -681,8 +749,9 @@ mod tests {
         )
         .unwrap();
 
-        let cfg = Config::new(catalog, PathBuf::from("/w"));
-        let outcomes = check_pdf(&cfg, &ws, &baseline, None).unwrap();
+        fs::copy(&baseline, ws.join("baseline.pdf")).unwrap();
+        let cfg = Config::new(catalog, ws.parent().unwrap().to_path_buf());
+        let outcomes = check_pdf(&cfg, &ws, Path::new("baseline.pdf"), None).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check result");
     }
 
@@ -718,8 +787,9 @@ mod tests {
         )
         .unwrap();
 
-        let cfg = Config::new(catalog, PathBuf::from("/w"));
-        let outcomes = check_pdf(&cfg, &ws, &golden, None).unwrap();
+        fs::copy(&golden, ws.join("golden.pdf")).unwrap();
+        let cfg = Config::new(catalog, ws.parent().unwrap().to_path_buf());
+        let outcomes = check_pdf(&cfg, &ws, Path::new("golden.pdf"), None).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check result");
 
         // Verify structural checkers found their targets (not ERROR)
@@ -780,9 +850,10 @@ mod tests {
         )
         .unwrap();
 
-        let cfg = Config::new(catalog, PathBuf::from("/w"));
+        fs::copy(&baseline, ws.join("baseline.pdf")).unwrap();
+        let cfg = Config::new(catalog, ws.parent().unwrap().to_path_buf());
         let ids: Vec<String> = vec!["global_margins".into(), "margin_symmetry".into()];
-        let outcomes = check_pdf(&cfg, &ws, &baseline, Some(&ids)).unwrap();
+        let outcomes = check_pdf(&cfg, &ws, Path::new("baseline.pdf"), Some(&ids)).unwrap();
         assert!(!outcomes.is_empty(), "expected at least one check");
         let outcome_ids: Vec<&str> = outcomes.iter().map(|o| o.id.as_str()).collect();
         assert!(outcome_ids.contains(&"global_margins"));
@@ -812,7 +883,8 @@ mod tests {
         }
 
         let ws = local_tempdir();
-        let result = pandoc_convert(&baseline, "typst", &ws);
+        let config = Config::new(catalog, ws.parent().unwrap().to_path_buf());
+        let result = pandoc_convert(&config, &baseline, "typst", &ws);
         match result {
             Ok(out) => {
                 assert!(out.is_file(), "typst output should exist");
@@ -828,34 +900,38 @@ mod tests {
 
     #[test]
     fn pandoc_convert_unsupported_extension_errors() {
-        let f = local_tempdir().join("foo.xyz");
-        fs::write(&f, b"whatever").unwrap();
         let ws = local_tempdir();
-        let result = pandoc_convert(&f, "typst", &ws);
+        let f = ws.join("foo.xyz");
+        fs::write(&f, b"whatever").unwrap();
+        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let result = pandoc_convert(&config, &f, "typst", &ws);
         assert!(matches!(result, Err(SpMcpError::Conversion(_))));
     }
 
     #[test]
     fn pandoc_convert_unsupported_format_errors() {
-        let f = local_tempdir().join("test.docx");
-        fs::write(&f, b"fake").unwrap();
         let ws = local_tempdir();
-        let result = pandoc_convert(&f, "xml", &ws);
+        let f = ws.join("test.docx");
+        fs::write(&f, b"fake").unwrap();
+        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let result = pandoc_convert(&config, &f, "xml", &ws);
         assert!(matches!(result, Err(SpMcpError::Conversion(_))));
     }
 
     #[test]
     fn pandoc_convert_missing_file_errors() {
         let ws = local_tempdir();
-        let result = pandoc_convert(Path::new("/nonexistent/foo.docx"), "typst", &ws);
-        assert!(matches!(result, Err(SpMcpError::Conversion(_))));
+        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let result = pandoc_convert(&config, &ws.join("missing.docx"), "typst", &ws);
+        assert!(matches!(result, Err(SpMcpError::PathViolation(_))));
     }
 
     #[test]
     fn interface_doc_reads_ref_json_or_errors_if_missing() {
         let ws = local_tempdir();
         // Case 1: no REFERENCE.json → error
-        let result = interface_doc(&ws);
+        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let result = interface_doc(&config, &ws);
         match result {
             Err(SpMcpError::Compilation(msg)) => {
                 assert!(
@@ -878,7 +954,7 @@ mod tests {
                 {"name":"foo","file":"sections/foo.typ","signature":"foo(x: 1)","description":"A test function.","params":[{"name":"x","type":"int","default":"1","description":"Test param"}]}
             ]}"#,
         ).unwrap();
-        let result = interface_doc(&ws).unwrap();
+        let result = interface_doc(&config, &ws).unwrap();
         assert!(
             result.contains("\"foo\""),
             "output should contain function name"
@@ -895,8 +971,9 @@ mod tests {
 
     #[test]
     fn interface_doc_workspace_not_found() {
-        let result = interface_doc(Path::new("/nonexistent-ws-xyz"));
-        assert!(matches!(result, Err(SpMcpError::WorkspaceNotFound(_, _))));
+        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let result = interface_doc(&config, Path::new("/nonexistent-ws-xyz"));
+        assert!(matches!(result, Err(SpMcpError::PathViolation(_))));
     }
 
     fn local_tempdir() -> PathBuf {
