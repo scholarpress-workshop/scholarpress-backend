@@ -8,7 +8,7 @@ fi
 
 OPENWORK_WORKSPACE="${1:?OpenWork workspace path is required}"
 PORT="${2:-${SCHOLARPRESS_PORT:-8765}}"
-BUNDLE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUNDLE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCHOLARPRESS_ROOT="$OPENWORK_WORKSPACE/.scholarpress"
 WORKSPACE_ROOT="$SCHOLARPRESS_ROOT/workspaces"
 CATALOG_ROOT="$SCHOLARPRESS_ROOT/catalog"
