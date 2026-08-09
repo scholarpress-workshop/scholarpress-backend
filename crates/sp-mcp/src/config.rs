@@ -1,9 +1,102 @@
+use std::net::IpAddr;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub catalog_path: PathBuf,
     pub workspace_root: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransportMode {
+    Stdio,
+    Http,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerOptions {
+    pub transport: TransportMode,
+    pub bind: IpAddr,
+    pub port: u16,
+}
+
+impl Default for ServerOptions {
+    fn default() -> Self {
+        Self {
+            transport: TransportMode::Stdio,
+            bind: IpAddr::from([127, 0, 0, 1]),
+            port: 8765,
+        }
+    }
+}
+
+impl ServerOptions {
+    pub fn from_env() -> Result<Self, ConfigError> {
+        let mut options = Self::default();
+        if let Ok(value) = std::env::var("SCHOLARPRESS_TRANSPORT") {
+            options.transport = parse_transport(&value)?;
+        }
+        if let Ok(value) = std::env::var("SCHOLARPRESS_BIND") {
+            options.bind = value
+                .parse()
+                .map_err(|_| ConfigError::Invalid("SCHOLARPRESS_BIND"))?;
+        }
+        if let Ok(value) = std::env::var("SCHOLARPRESS_PORT") {
+            options.port = value
+                .parse()
+                .map_err(|_| ConfigError::Invalid("SCHOLARPRESS_PORT"))?;
+        }
+        Ok(options)
+    }
+
+    pub fn apply_args<I>(mut self, mut args: I) -> Result<Self, ConfigError>
+    where
+        I: Iterator<Item = String>,
+    {
+        while let Some(arg) = args.next() {
+            let (key, value) = arg
+                .split_once('=')
+                .map(|(key, value)| (key.to_string(), value.to_string()))
+                .unwrap_or_else(|| (arg, String::new()));
+            match key.as_str() {
+                "--transport" => {
+                    let value = if value.is_empty() {
+                        args.next()
+                            .ok_or(ConfigError::MissingArgument("--transport"))?
+                    } else {
+                        value
+                    };
+                    self.transport = parse_transport(&value)?;
+                }
+                "--bind" => {
+                    let value = if value.is_empty() {
+                        args.next().ok_or(ConfigError::MissingArgument("--bind"))?
+                    } else {
+                        value
+                    };
+                    self.bind = value.parse().map_err(|_| ConfigError::Invalid("--bind"))?;
+                }
+                "--port" => {
+                    let value = if value.is_empty() {
+                        args.next().ok_or(ConfigError::MissingArgument("--port"))?
+                    } else {
+                        value
+                    };
+                    self.port = value.parse().map_err(|_| ConfigError::Invalid("--port"))?;
+                }
+                other => return Err(ConfigError::UnknownArgument(other.to_string())),
+            }
+        }
+        Ok(self)
+    }
+}
+
+fn parse_transport(value: &str) -> Result<TransportMode, ConfigError> {
+    match value {
+        "stdio" => Ok(TransportMode::Stdio),
+        "http" => Ok(TransportMode::Http),
+        _ => Err(ConfigError::Invalid("transport")),
+    }
 }
 
 impl Config {
@@ -52,6 +145,12 @@ pub enum ConfigError {
     Missing(&'static str),
     #[error("{0} does not point to an existing directory: {1}")]
     NotADirectory(&'static str, PathBuf),
+    #[error("invalid value for {0}")]
+    Invalid(&'static str),
+    #[error("missing argument after {0}")]
+    MissingArgument(&'static str),
+    #[error("unknown argument: {0}")]
+    UnknownArgument(String),
 }
 
 #[cfg(test)]
