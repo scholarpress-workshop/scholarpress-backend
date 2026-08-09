@@ -1,0 +1,70 @@
+name: Release ScholarPress Bundles
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "sp-mcp-v*"
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: scholarpress-backend
+      - uses: actions/checkout@v4
+        with:
+          repository: scholarpress-workshop/scholarpress-catalog
+          path: scholarpress-catalog
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install external tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          cargo install typst-cli --locked
+      - name: Test
+        working-directory: scholarpress-backend
+        run: cargo test --workspace
+      - name: Build
+        working-directory: scholarpress-backend
+        run: cargo build --release -p sp-mcp
+      - name: Assemble bundle
+        working-directory: scholarpress-backend
+        run: packaging/build-bundle.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scholarpress-linux-x86_64
+          path: scholarpress-backend/dist/scholarpress-linux-x86_64.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: scholarpress-backend
+      - uses: actions/checkout@v4
+        with:
+          repository: scholarpress-workshop/scholarpress-catalog
+          path: scholarpress-catalog
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install external tools
+        shell: powershell
+        run: choco install pandoc -y
+      - name: Install Typst
+        shell: powershell
+        run: cargo install typst-cli --locked
+      - name: Test
+        working-directory: scholarpress-backend
+        run: cargo test --workspace
+      - name: Build
+        working-directory: scholarpress-backend
+        run: cargo build --release --target x86_64-pc-windows-msvc -p sp-mcp
+      - name: Assemble bundle
+        working-directory: scholarpress-backend
+        shell: powershell
+        run: .\packaging\build-bundle.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scholarpress-windows-x86_64
+          path: scholarpress-backend/dist/scholarpress-windows-x86_64.zip

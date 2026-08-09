@@ -36,6 +36,25 @@ async fn http_transport_accepts_mcp_initialize() {
         .await
         .unwrap();
     assert!(response.status().is_success());
+    let session_id = response
+        .headers()
+        .get("Mcp-Session-Id")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
+
+    let tools = Client::new()
+        .post(format!("{base}/mcp"))
+        .header("content-type", "application/json")
+        .header("accept", "application/json, text/event-stream")
+        .header("MCP-Protocol-Version", "2025-11-25")
+        .header("Mcp-Session-Id", session_id)
+        .body(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#)
+        .send()
+        .await
+        .unwrap();
+    assert!(tools.status().is_success());
     task.abort();
 }
 
