@@ -1,10 +1,75 @@
 use std::net::IpAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use crate::error::SpMcpError;
+
+#[derive(Debug, Clone)]
+pub struct ToolResolver {
+    executable_dir: PathBuf,
+    path_dirs: Vec<PathBuf>,
+}
+
+impl ToolResolver {
+    pub fn new(executable_dir: PathBuf, path_dirs: Vec<PathBuf>) -> Self {
+        Self {
+            executable_dir,
+            path_dirs,
+        }
+    }
+
+    pub fn from_current_exe() -> Self {
+        let executable_dir = std::env::current_exe()
+            .ok()
+            .and_then(|path| path.parent().map(Path::to_path_buf))
+            .unwrap_or_else(|| PathBuf::from("."));
+        let path_dirs = std::env::var_os("PATH")
+            .map(|value| std::env::split_paths(&value).collect())
+            .unwrap_or_default();
+        Self::new(executable_dir, path_dirs)
+    }
+
+    pub fn resolve(&self, name: &str, override_path: Option<&Path>) -> Result<PathBuf, String> {
+        let filename = if cfg!(windows) {
+            format!("{name}.exe")
+        } else {
+            name.to_string()
+        };
+        let env_name = format!("SCHOLARPRESS_{}_PATH", name.to_uppercase());
+        if let Some(path) = override_path {
+            return existing_tool(path, &env_name);
+        }
+        let bundled = self.executable_dir.join("bin").join(&filename);
+        if bundled.is_file() {
+            return std::fs::canonicalize(&bundled).map_err(|error| error.to_string());
+        }
+        for directory in &self.path_dirs {
+            let path = directory.join(&filename);
+            if path.is_file() {
+                return std::fs::canonicalize(path).map_err(|error| error.to_string());
+            }
+        }
+        Err(format!(
+            "{name} executable not found; set {env_name}, place it at {}, or add it to PATH",
+            bundled.display()
+        ))
+    }
+}
+
+fn existing_tool(path: &Path, env_name: &str) -> Result<PathBuf, String> {
+    if !path.is_file() {
+        return Err(format!(
+            "{env_name} does not point to an executable: {}",
+            path.display()
+        ));
+    }
+    std::fs::canonicalize(path).map_err(|error| error.to_string())
+}
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub catalog_path: PathBuf,
     pub workspace_root: PathBuf,
+    pub tool_resolver: ToolResolver,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,7 +169,16 @@ impl Config {
         Self {
             catalog_path,
             workspace_root,
+            tool_resolver: ToolResolver::from_current_exe(),
         }
+    }
+
+    pub fn resolve_tool(&self, name: &str) -> Result<PathBuf, SpMcpError> {
+        let env_name = format!("SCHOLARPRESS_{}_PATH", name.to_uppercase());
+        let override_path = std::env::var_os(&env_name).map(PathBuf::from);
+        self.tool_resolver
+            .resolve(name, override_path.as_deref())
+            .map_err(SpMcpError::ToolNotFound)
     }
 
     pub fn from_env() -> Result<Self, ConfigError> {
@@ -130,6 +204,7 @@ impl Config {
         Ok(Self {
             catalog_path,
             workspace_root,
+            tool_resolver: ToolResolver::from_current_exe(),
         })
     }
 }

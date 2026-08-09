@@ -299,7 +299,8 @@ pub fn compile_typst(
     // needed. A separate dry_run tool was considered but rejected because it
     // would double LLM round-trips (3s per turn) to save ~50ms of typst compile
     // time. See sp-typst/src/lib.rs for related comment.
-    let bytes = typst::compile(&source, Some(&workspace))
+    let typst_path = config.resolve_tool("typst")?;
+    let bytes = typst::compile_with_binary(&typst_path, &source, Some(&workspace))
         .map_err(|e| SpMcpError::Compilation(e.to_string()))?;
 
     let stem = entry_path
@@ -496,7 +497,8 @@ pub fn pandoc_convert(
     let out_root = canonical_root(&out_dir, "output directory")?;
     let out_path = output_under(&out_root, Path::new(&out_name), "output path")?;
 
-    let output = std::process::Command::new("pandoc")
+    let pandoc_path = config.resolve_tool("pandoc")?;
+    let output = std::process::Command::new(pandoc_path)
         .arg(file_path)
         .arg("--from")
         .arg("docx")

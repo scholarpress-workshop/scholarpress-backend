@@ -40,4 +40,7 @@ pub enum SpMcpError {
 
     #[error("config error: {0}")]
     Config(#[from] crate::config::ConfigError),
+
+    #[error("tool not found: {0}")]
+    ToolNotFound(String),
 }
