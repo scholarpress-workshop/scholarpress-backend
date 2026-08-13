@@ -19,33 +19,45 @@ pub struct ScholarPressService {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CreateWorkspaceParams {
+    /// Workspace name to create under SCHOLARPRESS_WORKSPACE_ROOT.
     pub name: String,
+    /// Catalog profile ID returned by list_profiles, such as institutions/iu-indianapolis.
     pub profile_id: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CompileTypstParams {
+    /// Absolute workspace path returned by create_workspace.
     pub workspace: PathBuf,
+    /// Entry file path relative to the workspace, normally entry.typ.
     pub entry_path: PathBuf,
+    /// Output filename only; written below the workspace's out/ directory.
     pub out_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CheckPdfParams {
+    /// Absolute workspace path returned by create_workspace.
     pub workspace: PathBuf,
+    /// PDF path relative to the workspace, normally out/entry.pdf.
     pub pdf_path: PathBuf,
+    /// Optional check IDs to run; omit to run every check.
     pub check_ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct PandocConvertParams {
+    /// DOCX input path relative to the workspace.
     pub file_path: PathBuf,
+    /// Conversion format: typst or ast.
     pub format: String,
+    /// Absolute workspace path returned by create_workspace.
     pub workspace: PathBuf,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct InterfaceDocParams {
+    /// Absolute workspace path returned by create_workspace.
     pub workspace: PathBuf,
 }
 
@@ -62,9 +74,7 @@ impl ScholarPressService {
         McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None)
     }
 
-    #[tool(
-        description = "List existing workspaces under SCHOLARPRESS_WORKSPACE_ROOT. Returns name, absolute path, profile_id (if spec.yaml identifies one), and mtime."
-    )]
+    #[tool(description = "List existing workspaces under SCHOLARPRESS_WORKSPACE_ROOT.")]
     async fn list_workspaces(&self) -> Result<CallToolResult, McpError> {
         let list = workspace::list_workspaces(&self.config).map_err(Self::err)?;
         let json = serde_json::to_string(&list)
@@ -72,9 +82,7 @@ impl ScholarPressService {
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
-    #[tool(
-        description = "List available profiles in the catalog. Returns id (e.g. 'institutions/iu-indianapolis'), scope, and human-readable name."
-    )]
+    #[tool(description = "List catalog profiles available to create_workspace.")]
     async fn list_profiles(&self) -> Result<CallToolResult, McpError> {
         let list = workspace::list_profiles(&self.config).map_err(Self::err)?;
         let json = serde_json::to_string(&list)
@@ -83,7 +91,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Create a new workspace by copying a catalog profile (spec.yaml + template/) into a named dir under the workspace root. Returns the absolute path."
+        description = "Create a workspace by copying a catalog profile into SCHOLARPRESS_WORKSPACE_ROOT. Returns the absolute workspace path."
     )]
     async fn create_workspace(
         &self,
@@ -98,7 +106,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Compile a Typst entry file within a workspace. Writes the PDF to <workspace>/out/<out_name>.pdf (default = entry stem). Returns the absolute output path. Requires the `typst` binary on PATH. To pass structured data, write <workspace>/data.json with the agent's file tools before calling — the typst template can read it with `json(\"data.json\")` or `read(\"data.json\")`."
+        description = "Compile a Typst entry file within a workspace. Writes the PDF below <workspace>/out/ and returns its absolute path. The entry path is relative to the workspace. Requires the typst executable."
     )]
     async fn compile_typst(
         &self,
@@ -118,7 +126,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Run formatting checks against the workspace's spec.yaml. Always uses the workspace spec. Returns a list of check outcomes (id, status, message, page, source_hints). Optionally filter to specific check IDs via check_ids param."
+        description = "Run the workspace spec's formatting checks against a PDF. Optionally limit execution with check_ids."
     )]
     async fn check_pdf(
         &self,
@@ -138,7 +146,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Convert a DOCX file to Typst or pandoc JSON AST. Writes output to <workspace>/out/<stem>.typ (for format: \"typst\") or <workspace>/out/<stem>.json (for format: \"ast\"). Returns the absolute output path. Requires `pandoc` on PATH (already installed).\n\nAST headings are unreliable — many DOCX files use direct formatting instead of heading styles. Prefer TOC text over AST for section boundaries."
+        description = "Convert a workspace DOCX to Typst source or pandoc JSON AST. Use typst or ast as the format. TOC text is more reliable than AST headings for section mapping."
     )]
     async fn pandoc_convert(
         &self,
@@ -153,7 +161,7 @@ impl ScholarPressService {
     }
 
     #[tool(
-        description = "Returns a structured reference for every section function in the workspace template: function signatures, parameter types, default values, descriptions, and calling examples. Reads a pre-rendered template/REFERENCE.json — no compilation needed. Generated by CI from tidy doc-comments in the catalog."
+        description = "Return the template's generated REFERENCE.json with section function signatures, parameter types, defaults, and examples."
     )]
     async fn interface_doc(
         &self,
@@ -173,7 +181,7 @@ impl rmcp::handler::server::ServerHandler for ScholarPressService {
         ServerInfo::new(capabilities)
             .with_server_info(server_info)
             .with_instructions(
-                "ScholarPress: catalog + Typst template workspace tools. Use list_profiles to discover profiles, create_workspace to fork one into a scratch dir, then edit, compile_typst + check_pdf.\n\nYOUR ROLE — Intelligent Intermediary:\n\nPandoc produces a best-effort starting point from messy DOCX inputs. You are the intelligent intermediary between raw conversion and clean Typst. Expect artifacts:\n- #underline[...] for headings instead of Typst heading syntax\n- #strong[...] for bold instead of *bold*\n- Mixed dash styles (--- vs --)\n- Inconsistent spacing and formatting\n\nNo rigid pre-processing pipeline exists — every author's DOCX formatting is different, and that's why an LLM is in the loop. You are expected to handle these artifacts intelligently.\n\nWORKFLOW — Map–Scaffold–Migrate–Verify:\n\nInterface — After create_workspace, call interface_doc to see every section function's signature, parameter types, entry data shapes (dict vs tuple vs raw content), and calling examples. This eliminates guesswork about which functions expect dicts, tuples, or content.\n\nMap — pandoc_convert(format: \"ast\") to survey structure, then scan pandoc_convert(format: \"typst\") output for Table of Contents. AST headings are unreliable (most DOCX uses direct formatting, not heading styles). The TOC is the source of truth for section count, order, and boundaries.\n\nScaffold — Create entry file with sections wired per template.typ comments (NAMED parameters, import pattern, chapter per-file convention).\n\nMigrate — One section at a time from the TOC: keyword-match the section title in pandoc typst output to find start boundary, keyword-match next section title for end boundary, slice the chunk, copy into the corresponding template section function. Run compile_typst to catch errors early.\n\nVerify — compile_typst + check_pdf per milestone. Iterate incrementally.\n\nDebug — When check_pdf reports failures, use check_ids to isolate: source_hints on each violation suggest likely culprit files. To confirm, create a minimal .typ file in the workspace that imports only the suspect section function from template.typ, sets #set page(...) matching the spec, and calls the section. Then: compile_typst(isolate.typ) -> check_pdf(isolate.pdf, check_ids: [\"the_failing_check_id\"]). If the check still fails -> issue is in the template section or styles. If it passes -> issue is in how entry.typ wires or composes the section.",
+                "ScholarPress workflow: call list_profiles, create_workspace, and interface_doc first. Convert the DOCX with pandoc_convert(format: \"ast\") and pandoc_convert(format: \"typst\") as needed. Write entry.typ and chapter files, then call compile_typst and check_pdf. Use check_ids to isolate PDF failures. Pandoc output is best effort; use TOC text to map sections and clean Typst artifacts such as #underline[...] and #strong[...].",
             )
     }
 }

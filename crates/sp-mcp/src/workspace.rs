@@ -166,7 +166,6 @@ pub fn create_workspace(
     if target.exists() {
         return Err(SpMcpError::WorkspaceExists(target));
     }
-    std::fs::create_dir_all(target.join("data"))?;
     std::fs::create_dir_all(target.join("out"))?;
 
     copy_tree(&profile_dir.join("spec.yaml"), &target.join("spec.yaml"))?;
@@ -411,34 +410,34 @@ fn source_hints(check_id: &str) -> Vec<String> {
         "justification_consistent" => hint("template/template.typ"),
         "front_matter_presence" => hint("entry.typ"),
         "front_matter_order" => hint("entry.typ"),
-        "title_clause_wording" => hint("chapters/title-page.typ"),
+        "title_clause_wording" => hint("template/sections/front-matter.typ"),
         "committee_chair_first" => hint("entry.typ"),
         "toc_chapter_title_parity" => hints(&["chapters/", "entry.typ"]),
-        "title_page_no_bold" => hint("chapters/title-page.typ"),
+        "title_page_no_bold" => hint("template/sections/front-matter.typ"),
         "title_page_no_page_number" => hint("template/template.typ"),
-        "title_page_all_caps" => hints(&["chapters/title-page.typ", "entry.typ"]),
+        "title_page_all_caps" => hints(&["template/sections/front-matter.typ", "entry.typ"]),
         "acceptance_page_page_number_ii" => hint("template/template.typ"),
-        "clause_spacing" => hint("chapters/title-page.typ"),
-        "title_page_clause_centered" => hint("chapters/title-page.typ"),
-        "title_page_clause_spacing" => hint("chapters/title-page.typ"),
+        "clause_spacing" => hint("template/sections/front-matter.typ"),
+        "title_page_clause_centered" => hint("template/sections/front-matter.typ"),
+        "title_page_clause_spacing" => hint("template/sections/front-matter.typ"),
         "copyright_page_format" => hint("entry.typ"),
         "page_numbers_format" => hint("entry.typ"),
-        "headings_consistent" => hints(&["chapters/", "template/styles.typ"]),
+        "headings_consistent" => hints(&["template/sections/chapter.typ", "chapters/"]),
         "footnotes_font_consistent" => hint("template/styles.typ"),
         "footnotes_spacing" => hint("template/styles.typ"),
-        "new_chapters_new_pages" => hints(&["chapters/", "template/template.typ"]),
+        "new_chapters_new_pages" => hints(&["template/sections/chapter.typ", "chapters/"]),
         "tables_figures_legend_font" => hint("chapters/"),
         "hyperlinks_format" => hint("chapters/"),
-        "references_font_consistent" => hint("template/template.typ"),
-        "references_heading_format" => hint("template/template.typ"),
-        "references_spacing" => hint("template/template.typ"),
-        "cv_heading_format" => hint("template/template.typ"),
+        "references_font_consistent" => hint("template/sections/back-matter.typ"),
+        "references_heading_format" => hint("template/sections/back-matter.typ"),
+        "references_spacing" => hint("template/sections/back-matter.typ"),
+        "cv_heading_format" => hint("template/sections/back-matter.typ"),
         "cv_name_position" => hint("entry.typ"),
-        "cv_no_credentials" => hint("chapters/cv.typ"),
-        "cv_no_page_number" => hint("template/template.typ"),
-        "abstract_text_centered" => hint("chapters/abstract.typ"),
-        "abstract_word_count" => hint("chapters/abstract.typ"),
-        "abstract_title_format" => hint("chapters/abstract.typ"),
+        "cv_no_credentials" => hint("template/sections/back-matter.typ"),
+        "cv_no_page_number" => hint("template/sections/back-matter.typ"),
+        "abstract_text_centered" => hint("template/sections/front-matter.typ"),
+        "abstract_word_count" => hint("template/sections/front-matter.typ"),
+        "abstract_title_format" => hint("template/sections/front-matter.typ"),
         "toc_page_numbers_aligned" => hints(&["entry.typ", "template/template.typ"]),
         "toc_no_overhang" => hint("entry.typ"),
         "toc_cv_no_dots" => hint("entry.typ"),
@@ -659,10 +658,31 @@ mod tests {
             .join("sections")
             .join("ch.typ")
             .is_file());
-        assert!(path.join("data").is_dir());
         assert!(path.join("out").is_dir());
+        assert!(!path.join("data").exists());
         // tests/ skipped
         assert!(!path.join("template").join("tests").exists());
+    }
+
+    #[test]
+    fn source_hints_use_current_template_paths() {
+        let ids = [
+            "title_clause_wording",
+            "abstract_title_format",
+            "headings_consistent",
+            "references_heading_format",
+            "cv_heading_format",
+        ];
+        for id in ids {
+            let hints = source_hints(id);
+            assert!(hints
+                .iter()
+                .all(|hint| !hint.contains("chapters/title-page.typ")));
+            assert!(hints
+                .iter()
+                .all(|hint| !hint.contains("chapters/abstract.typ")));
+            assert!(hints.iter().all(|hint| !hint.contains("chapters/cv.typ")));
+        }
     }
 
     #[test]

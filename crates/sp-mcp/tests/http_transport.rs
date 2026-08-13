@@ -55,6 +55,15 @@ async fn http_transport_accepts_mcp_initialize() {
         .await
         .unwrap();
     assert!(tools.status().is_success());
+    let body = tools.text().await.unwrap();
+    assert!(body.contains("compile_typst"));
+    assert!(body.contains("check_pdf"));
+    assert!(body.contains("pandoc_convert"));
+    assert!(body.contains("Entry file path relative to the workspace, normally entry.typ."));
+    assert!(body.contains("PDF path relative to the workspace, normally out/entry.pdf."));
+    assert!(body.contains("Conversion format: typst or ast."));
+    assert!(!body.contains("data.json"));
+    assert!(!body.contains("Map–Scaffold–Migrate–Verify"));
     task.abort();
 }
 
