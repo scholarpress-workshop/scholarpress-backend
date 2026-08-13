@@ -1,13 +1,13 @@
 # sp-mcp
 
-Stdio MCP server for the ScholarPress ecosystem. Exposes workspace/profile
-discovery, document conversion, Typst compilation, PDF checks, and template
-interface documentation for use from any MCP-compliant agent harness.
+MCP server for the ScholarPress ecosystem. Exposes workspace/profile discovery,
+document conversion, Typst compilation, PDF checks, and template interface
+documentation over stdio or localhost Streamable HTTP.
 
 ## Requirements
 
 - Rust 1.88+ (for building)
-- The `typst` binary on `PATH` (for `compile_typst`):
+- The `typst` binary on `PATH` (for `compile_typst`) when using a source checkout:
   ```bash
   cargo install typst-cli
   # or download from https://github.com/typst/typst/releases
@@ -26,6 +26,11 @@ Binary: `target/release/sp-mcp`
 |----------|----------|---------|---------|
 | `SCHOLARPRESS_CATALOG_PATH` | yes | — | Path to a local `scholarpress-catalog` checkout |
 | `SCHOLARPRESS_WORKSPACE_ROOT` | no | `~/.scholarpress/workspaces` | Root for per-job scratch directories |
+| `SCHOLARPRESS_TRANSPORT` | no | `stdio` | `stdio` or `http` |
+| `SCHOLARPRESS_BIND` | no | `127.0.0.1` | HTTP bind address |
+| `SCHOLARPRESS_PORT` | no | `8765` | HTTP port |
+| `SCHOLARPRESS_TYPST_PATH` | no | bundle, then PATH | Explicit Typst executable |
+| `SCHOLARPRESS_PANDOC_PATH` | no | bundle, then PATH | Explicit Pandoc executable |
 
 ## OpenCode configuration
 
@@ -46,7 +51,18 @@ Binary: `target/release/sp-mcp`
 ```
 
 Restart OpenCode after editing. The server appears in the MCP panel as
-"scholarpress" with six tools.
+"scholarpress" with the current tool set.
+
+## OpenWork local HTTP
+
+For native Windows, use the platform archive and launcher under `packaging/`.
+The launcher creates a dedicated `.scholarpress` directory inside the selected
+OpenWork workspace, starts `sp-mcp` on loopback, and prints the MCP URL. Add
+that URL in OpenWork under `Settings` > `Extensions` > `Add Custom App`.
+
+Use `--transport http --bind 127.0.0.1 --port 8765` directly when starting the
+server without a launcher. WSL uses the Linux archive; native Windows uses the
+Windows archive and does not require WSL.
 
 ## Tools
 
@@ -55,9 +71,10 @@ Restart OpenCode after editing. The server appears in the MCP panel as
 | `list_profiles` | — | JSON array of `{id, scope, name}` |
 | `list_workspaces` | — | JSON array of `{name, path, profile_id, mtime}` |
 | `create_workspace` | `{name, profile_id}` | Absolute workspace path |
-| `compile_typst` | `{workspace, entry_path, data?, out_name?}` | Absolute path to written PDF |
+| `compile_typst` | `{workspace, entry_path, out_name?}` | Absolute path to written PDF |
 | `check_pdf` | `{workspace, pdf_path}` | JSON array of `{id, status, message, page}` |
-| `extract_document` | `{file_path}` | JSON `ParsedDocument` |
+| `pandoc_convert` | `{file_path, format, workspace}` | Absolute path to Typst or AST output |
+| `interface_doc` | `{workspace}` | Pretty-printed template reference JSON |
 
 ## Workflow
 

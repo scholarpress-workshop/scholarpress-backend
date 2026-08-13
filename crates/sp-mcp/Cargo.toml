@@ -17,8 +17,13 @@ serde = { version = "1", features = ["derive"] }
 sp-typst = { path = "../sp-typst" }
 sp-check = { path = "../sp-check" }
 serde_json = "1"
-rmcp = { version = "3", features = ["transport-io", "macros", "server", "schemars"] }
+rmcp = { version = "3", features = ["transport-io", "transport-streamable-http-server", "macros", "server", "schemars"] }
 schemars = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 anyhow = "1"
 futures = "0.3"
+axum = "0.8"
+
+[dev-dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+tempfile = "3"
