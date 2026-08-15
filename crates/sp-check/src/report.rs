@@ -1,7 +1,7 @@
 use crate::checkers::{CheckResult, Status};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Summary {
     pub pass: usize,
     pub fail: usize,
@@ -9,7 +9,7 @@ pub struct Summary {
     pub error: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
     pub results: Vec<CheckResult>,
     pub summary: Summary,
@@ -209,5 +209,30 @@ mod tests {
         assert_eq!(report.results.len(), 0);
         let output = format_text(&report);
         assert!(output.contains("0 PASS"));
+    }
+
+    #[test]
+    fn test_report_json_roundtrip() {
+        let results = vec![
+            make_result(Status::Fail),
+            make_result(Status::Pass),
+            CheckResult {
+                check_id: "global_margins".to_string(),
+                status: Status::Error,
+                evidence: vec![EvidenceItem {
+                    page: 4,
+                    bbox: Some((10.0, 20.0, 30.0, 40.0)),
+                    excerpt: Some("1 inch".to_string()),
+                }],
+                detail: "margins too small".to_string(),
+            },
+        ];
+        let report = build_report(results);
+        let json = format_json(&report).expect("json");
+        let parsed: Report = serde_json::from_str(&json).expect("parse back");
+        assert_eq!(parsed.results.len(), 3);
+        assert_eq!(parsed.results[0].status, Status::Fail);
+        assert_eq!(parsed.results[2].evidence[0].bbox, Some((10.0, 20.0, 30.0, 40.0)));
+        assert_eq!(parsed.summary.fail, 1);
     }
 }

@@ -1,9 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sp_extract::document::ParsedDocument;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum Status {
     Pass,
     Fail,
@@ -22,14 +23,14 @@ impl Status {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceItem {
     pub page: usize,
     pub bbox: Option<(f32, f32, f32, f32)>,
     pub excerpt: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckResult {
     pub check_id: String,
     pub status: Status,
