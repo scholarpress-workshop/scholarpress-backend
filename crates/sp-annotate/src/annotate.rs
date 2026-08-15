@@ -1,4 +1,7 @@
+use pdf_oxide::annotation_types::TextMarkupType;
+use pdf_oxide::editor::DocumentEditor;
 use pdf_oxide::geometry::Rect;
+use pdf_oxide::writer::{DocumentBuilder, PageSize, TextAnnotation, TextMarkupAnnotation};
 use sp_check::checkers::Status;
 use sp_check::report::Report;
 
@@ -65,9 +68,73 @@ pub(crate) fn summary_text(report: &Report) -> String {
     lines.join("\n")
 }
 
-// Task 3 fills this in; stub so the crate compiles now.
-pub(crate) fn annotate_bytes(_input: &[u8], _report: &Report) -> Result<Vec<u8>, crate::AnnotateError> {
-    Ok(Vec::new())
+pub(crate) fn annotate_bytes(
+    input: &[u8],
+    report: &Report,
+) -> Result<Vec<u8>, crate::AnnotateError> {
+    // 1. Annotate the source PDF in place. `edit_page`/`get_page_media_box` on a
+    // `DocumentEditor` only address its own source pages, not pages appended by
+    // `merge_from_bytes`, so the source must be annotated before it is merged.
+    let mut editor = DocumentEditor::from_bytes(input.to_vec())?;
+    let page_count = editor.current_page_count();
+    let mut heights = vec![0.0f32; page_count];
+    for (i, h) in heights.iter_mut().enumerate() {
+        let mb = editor.get_page_media_box(i)?;
+        *h = mb[3] - mb[1];
+    }
+
+    for result in &report.results {
+        if result.status == Status::Pass {
+            continue;
+        }
+        for ev in &result.evidence {
+            let Some(bbox) = ev.bbox else { continue };
+            let page_idx = ev.page; // 1-based
+            if page_idx == 0 || page_idx > page_count {
+                continue;
+            }
+            let h = heights[page_idx - 1];
+            let rect = bbox_to_rect(bbox, h);
+            let note_rect = Rect::new(rect.x, (rect.y + rect.height - 14.0).max(0.0), 14.0, 14.0);
+            let contents = note_contents(
+                &result.check_id,
+                result.status.as_str(),
+                &result.detail,
+                ev.excerpt.as_deref(),
+            );
+            editor.edit_page(page_idx - 1, |page| {
+                page.add_annotation(
+                    TextMarkupAnnotation::from_rect(TextMarkupType::Highlight, rect)
+                        .with_color(1.0, 1.0, 0.0)
+                        .with_opacity(0.4)
+                        .with_author("scholarpress"),
+                );
+                page.add_annotation(
+                    TextAnnotation::new(note_rect, contents).with_author("scholarpress"),
+                );
+                Ok(())
+            })?;
+        }
+    }
+    let annotated = editor.save_to_bytes()?;
+
+    // 2. Build a one-page summary PDF.
+    let summary = summary_text(report);
+    let mut builder = DocumentBuilder::new();
+    {
+        let mut page = builder.page(PageSize::Letter);
+        page = page.font("Helvetica", 9.0).at(54.0, 720.0);
+        for line in summary.lines() {
+            page = page.text(line).newline();
+        }
+        page.done();
+    }
+    let summary_bytes = builder.build()?;
+
+    // 3. Prepend the summary page, then append the annotated source pages.
+    let mut out = DocumentEditor::from_bytes(summary_bytes)?;
+    out.merge_from_bytes(&annotated)?;
+    out.save_to_bytes().map_err(Into::into)
 }
 
 #[cfg(test)]
@@ -115,7 +182,12 @@ mod tests {
 
     #[test]
     fn note_contents_includes_fields() {
-        let s = note_contents("global_margins", "FAIL", "margins too small", Some("1 inch"));
+        let s = note_contents(
+            "global_margins",
+            "FAIL",
+            "margins too small",
+            Some("1 inch"),
+        );
         assert!(s.contains("[global_margins] FAIL"));
         assert!(s.contains("margins too small"));
         assert!(s.contains("1 inch"));
@@ -128,6 +200,66 @@ mod tests {
         assert!(text.contains("missing section"));
         assert!(text.contains("Fail: 2"));
         assert!(text.contains("Pass: 1"));
-        assert!(!text.contains("test_inplace"), "in-place finding must not be duplicated");
+        assert!(
+            !text.contains("test_inplace"),
+            "in-place finding must not be duplicated"
+        );
+    }
+
+    #[test]
+    fn annotate_bytes_prepends_summary_and_adds_annotations() {
+        // Locate the IU baseline fixture, skipping if absent (matches sp-mcp pattern).
+        let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let catalog = (0..6)
+            .map(|i| {
+                let mut p = manifest.clone();
+                for _ in 0..=i {
+                    p.pop();
+                }
+                p.join("scholarpress-catalog")
+            })
+            .find(|p| p.is_dir());
+        let baseline = match catalog {
+            Some(c) => c.join("institutions/iu-indianapolis/tests/fixtures/baseline.pdf"),
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found");
+                return;
+            }
+        };
+        let input = match std::fs::read(&baseline) {
+            Ok(b) => b,
+            Err(_) => {
+                eprintln!("SKIP: baseline.pdf fixture not present (run bash compile.sh)");
+                return;
+            }
+        };
+
+        let original_pages = pdf_oxide::PdfDocument::from_bytes(input.clone())
+            .expect("open input")
+            .page_count()
+            .expect("page count");
+
+        let out = annotate_bytes(&input, &sample_report()).expect("annotate should succeed");
+        assert!(out.starts_with(b"%PDF"));
+
+        let doc = pdf_oxide::PdfDocument::from_bytes(out).expect("reopen output");
+        assert_eq!(doc.page_count().expect("pages"), original_pages + 1);
+
+        let first = doc.extract_text(0).expect("summary text");
+        assert!(
+            first.contains("Annotated Summary"),
+            "page 0 should be the summary page"
+        );
+
+        // In-place finding on page 1 (1-based) lives at output index 1.
+        let annots = doc.get_annotations(1).expect("annotations on page 1");
+        assert!(!annots.is_empty(), "expected annotations on page 1");
+        assert!(
+            annots.iter().any(|a| matches!(
+                a.subtype_enum,
+                pdf_oxide::annotation_types::AnnotationSubtype::Highlight
+            )),
+            "expected a highlight annotation"
+        );
     }
 }
