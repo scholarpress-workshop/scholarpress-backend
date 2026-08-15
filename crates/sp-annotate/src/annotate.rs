@@ -4,6 +4,7 @@ use pdf_oxide::geometry::Rect;
 use pdf_oxide::writer::{DocumentBuilder, PageSize, TextAnnotation, TextMarkupAnnotation};
 use sp_check::checkers::Status;
 use sp_check::report::Report;
+use std::collections::HashSet;
 
 /// Convert a top-left-origin bbox `(top, bottom, x0, x1)` to a PDF-space
 /// `Rect` (bottom-left origin) given the page height in points.
@@ -34,7 +35,8 @@ fn ascii_only(s: &str) -> String {
 }
 
 /// Build the ASCII text rendered on the prepended summary page:
-/// counts plus document-level (non-bbox) findings only.
+/// counts plus every non-PASS finding that is not exclusively in-place
+/// (i.e. document-level non-bbox evidence, and results with no evidence at all).
 pub(crate) fn summary_text(report: &Report) -> String {
     let mut lines = vec![
         "ScholarPress Format Check - Annotated Summary".to_string(),
@@ -54,7 +56,9 @@ pub(crate) fn summary_text(report: &Report) -> String {
             continue;
         }
         let doc_evidence: Vec<_> = r.evidence.iter().filter(|e| e.bbox.is_none()).collect();
-        if doc_evidence.is_empty() {
+        let any_bbox = r.evidence.iter().any(|e| e.bbox.is_some());
+        if any_bbox && doc_evidence.is_empty() {
+            // All findings are in-place highlights; nothing to list here.
             continue;
         }
         count += 1;
@@ -75,6 +79,40 @@ pub(crate) fn summary_text(report: &Report) -> String {
     lines.join("\n")
 }
 
+/// Maximum characters per wrapped summary line (9pt Helvetica on a Letter
+/// page with 54pt side margins; conservative so lines stay within the page).
+const SUMMARY_LINE_CHARS: usize = 90;
+
+/// Greedily wrap an ASCII line to at most `max_chars` characters per output
+/// line. Blank lines are preserved as a single empty line.
+fn wrap_line(line: &str, max_chars: usize) -> Vec<String> {
+    if line.trim().is_empty() {
+        return vec![String::new()];
+    }
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    for word in line.split_whitespace() {
+        if cur.is_empty() {
+            cur.push_str(word);
+        } else if cur.len() + 1 + word.len() <= max_chars {
+            cur.push(' ');
+            cur.push_str(word);
+        } else {
+            out.push(std::mem::take(&mut cur));
+            cur.push_str(word);
+        }
+        while cur.len() > max_chars {
+            let tail = cur.split_off(max_chars);
+            out.push(std::mem::take(&mut cur));
+            cur = tail;
+        }
+    }
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
 pub(crate) fn annotate_bytes(
     input: &[u8],
     report: &Report,
@@ -89,6 +127,7 @@ pub(crate) fn annotate_bytes(
         *mb = editor.get_page_media_box(i)?;
     }
 
+    let mut seen: HashSet<(String, usize, i32, i32, i32, i32)> = HashSet::new();
     for result in &report.results {
         if result.status == Status::Pass {
             continue;
@@ -97,6 +136,19 @@ pub(crate) fn annotate_bytes(
             let Some(bbox) = ev.bbox else { continue };
             let page_idx = ev.page; // 1-based
             if page_idx == 0 || page_idx > page_count {
+                continue;
+            }
+            // Deduplicate identical (check_id, page, bbox) findings so a
+            // checker that reports the same region twice gets one highlight.
+            let key = (
+                result.check_id.clone(),
+                page_idx,
+                bbox.0.round() as i32,
+                bbox.1.round() as i32,
+                bbox.2.round() as i32,
+                bbox.3.round() as i32,
+            );
+            if !seen.insert(key) {
                 continue;
             }
             let mb = media_boxes[page_idx - 1];
@@ -137,7 +189,12 @@ pub(crate) fn annotate_bytes(
         let mut page = builder.page(PageSize::Letter);
         page = page.font("Helvetica", 9.0).at(54.0, 720.0);
         for line in summary.lines() {
-            page = page.text(line).newline();
+            for wrapped in wrap_line(line, SUMMARY_LINE_CHARS) {
+                if page.remaining_space() < 14.0 {
+                    page = page.new_page_same_size().at(54.0, 720.0);
+                }
+                page = page.text(&wrapped).newline();
+            }
         }
         page.done();
     }
@@ -161,11 +218,18 @@ mod tests {
                 check_id: "test_inplace".to_string(),
                 status: Status::Fail,
                 detail: "margins too small".to_string(),
-                evidence: vec![EvidenceItem {
-                    page: 1,
-                    bbox: Some((100.0, 120.0, 200.0, 300.0)),
-                    excerpt: Some("1 inch".to_string()),
-                }],
+                evidence: vec![
+                    EvidenceItem {
+                        page: 1,
+                        bbox: Some((100.0, 120.0, 200.0, 300.0)),
+                        excerpt: Some("1 inch".to_string()),
+                    },
+                    EvidenceItem {
+                        page: 1,
+                        bbox: Some((100.0, 120.0, 200.0, 300.0)),
+                        excerpt: Some("1 inch (duplicate)".to_string()),
+                    },
+                ],
             },
             CheckResult {
                 check_id: "test_global".to_string(),
@@ -219,6 +283,35 @@ mod tests {
     }
 
     #[test]
+    fn summary_text_lists_no_evidence_results() {
+        let report = build_report(vec![CheckResult {
+            check_id: "no_evidence".to_string(),
+            status: Status::Error,
+            detail: "checker found nothing to measure".to_string(),
+            evidence: vec![],
+        }]);
+        let text = summary_text(&report);
+        assert!(
+            text.contains("[ERROR] no_evidence"),
+            "no-evidence results must appear in the summary, not be silently dropped"
+        );
+        assert!(text.contains("checker found nothing to measure"));
+    }
+
+    #[test]
+    fn wrap_line_wraps_and_preserves_blanks() {
+        assert_eq!(wrap_line("", 90), vec![""]);
+        assert_eq!(wrap_line("   ", 90), vec![""]);
+        assert_eq!(wrap_line("short", 90), vec!["short"]);
+        assert_eq!(
+            wrap_line("the quick brown fox jumps", 12),
+            vec!["the quick", "brown fox", "jumps"]
+        );
+        // single overlong word hard-breaks
+        assert_eq!(wrap_line("abcdefghijklm", 5), vec!["abcde", "fghij", "klm"]);
+    }
+
+    #[test]
     fn annotate_bytes_prepends_summary_and_adds_annotations() {
         // Locate the IU baseline fixture, skipping if absent (matches sp-mcp pattern).
         let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -266,6 +359,19 @@ mod tests {
         // In-place finding on page 1 (1-based) lives at output index 1.
         let annots = doc.get_annotations(1).expect("annotations on page 1");
         assert!(!annots.is_empty(), "expected annotations on page 1");
+        let highlight_count = annots
+            .iter()
+            .filter(|a| {
+                matches!(
+                    a.subtype_enum,
+                    pdf_oxide::annotation_types::AnnotationSubtype::Highlight
+                )
+            })
+            .count();
+        assert_eq!(
+            highlight_count, 1,
+            "duplicate evidence for the same bbox must collapse to one highlight"
+        );
         assert!(
             annots.iter().any(|a| matches!(
                 a.subtype_enum,
