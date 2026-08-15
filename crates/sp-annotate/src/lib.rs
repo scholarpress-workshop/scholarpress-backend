@@ -1,6 +1,5 @@
 pub mod annotate;
 
-use pdf_oxide::geometry::Rect;
 use sp_check::report::Report;
 
 #[derive(Debug, thiserror::Error)]

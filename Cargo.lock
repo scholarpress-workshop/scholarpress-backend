@@ -3026,6 +3026,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-annotate"
+version = "0.1.0"
+dependencies = [
+ "pdf_oxide",
+ "serde",
+ "serde_json",
+ "sp-check",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "sp-check"
 version = "0.1.0"
 dependencies = [
