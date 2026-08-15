@@ -46,6 +46,16 @@ pub struct CheckPdfParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct AnnotatePdfParams {
+    /// Absolute workspace path returned by create_workspace.
+    pub workspace: PathBuf,
+    /// PDF path relative to the workspace, normally out/entry.pdf.
+    pub pdf_path: PathBuf,
+    /// Optional check IDs to run; omit to run every check.
+    pub check_ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct PandocConvertParams {
     /// DOCX input path relative to the workspace.
     pub file_path: PathBuf,
@@ -146,6 +156,26 @@ impl ScholarPressService {
     }
 
     #[tool(
+        description = "Run the workspace spec's checks against a PDF, then write an annotated copy (prepended summary page + in-place highlights and sticky notes for findings) below <workspace>/out/. Returns the annotated PDF's absolute path."
+    )]
+    async fn annotate_pdf(
+        &self,
+        params: Parameters<AnnotatePdfParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let p = params.0;
+        let out = workspace::annotate_pdf(
+            &self.config,
+            &p.workspace,
+            &p.pdf_path,
+            p.check_ids.as_deref(),
+        )
+        .map_err(Self::err)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(
+            out.display().to_string(),
+        )]))
+    }
+
+    #[tool(
         description = "Convert a workspace DOCX to Typst source or pandoc JSON AST. Use typst or ast as the format. TOC text is more reliable than AST headings for section mapping."
     )]
     async fn pandoc_convert(
@@ -181,7 +211,7 @@ impl rmcp::handler::server::ServerHandler for ScholarPressService {
         ServerInfo::new(capabilities)
             .with_server_info(server_info)
             .with_instructions(
-                "ScholarPress workflow: call list_profiles, create_workspace, and interface_doc first. Convert the DOCX with pandoc_convert(format: \"ast\") and pandoc_convert(format: \"typst\") as needed. Write entry.typ and chapter files, then call compile_typst and check_pdf. Use check_ids to isolate PDF failures. The source DOCX is the source of truth for content; the workspace template is the source of truth for formatting — never edit the template to reproduce the source document's formatting. Pandoc output is best effort; use TOC text to map sections and clean Typst artifacts such as #underline[...] and #strong[...].",
+                "ScholarPress workflow: call list_profiles, create_workspace, and interface_doc first. Convert the DOCX with pandoc_convert(format: \"ast\") and pandoc_convert(format: \"typst\") as needed. Write entry.typ and chapter files, then call compile_typst and check_pdf. Use check_ids to isolate PDF failures. After check_pdf reports failures, call annotate_pdf to produce a visually annotated copy for the author. The source DOCX is the source of truth for content; the workspace template is the source of truth for formatting — never edit the template to reproduce the source document's formatting. Pandoc output is best effort; use TOC text to map sections and clean Typst artifacts such as #underline[...] and #strong[...].",
             )
     }
 }

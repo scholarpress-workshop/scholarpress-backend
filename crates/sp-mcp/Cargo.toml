@@ -16,6 +16,7 @@ thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 sp-typst = { path = "../sp-typst" }
 sp-check = { path = "../sp-check" }
+sp-annotate = { path = "../sp-annotate" }
 serde_json = "1"
 rmcp = { version = "3", features = ["transport-io", "transport-streamable-http-server", "macros", "server", "schemars"] }
 schemars = "1"

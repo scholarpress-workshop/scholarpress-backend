@@ -38,6 +38,9 @@ pub enum SpMcpError {
     #[error("check failed: {0}")]
     Check(String),
 
+    #[error("annotate failed: {0}")]
+    Annotate(String),
+
     #[error("config error: {0}")]
     Config(#[from] crate::config::ConfigError),
 

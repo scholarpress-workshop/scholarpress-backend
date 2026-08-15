@@ -390,6 +390,52 @@ pub fn check_pdf(
     Ok(outcomes)
 }
 
+pub fn annotate_pdf(
+    config: &Config,
+    workspace: &Path,
+    pdf_path: &Path,
+    check_ids: Option<&[String]>,
+) -> Result<PathBuf, SpMcpError> {
+    let workspace = resolve_workspace(config, workspace)?;
+    let spec_path = workspace.join("spec.yaml");
+    if !spec_path.is_file() {
+        return Err(SpMcpError::SpecMissing(spec_path));
+    }
+    let pdf_abs = existing_under(&workspace, pdf_path, "pdf path")?;
+    if !pdf_abs.is_file() {
+        return Err(SpMcpError::Check(format!(
+            "pdf not found: {}",
+            pdf_abs.display()
+        )));
+    }
+
+    let spec = check::spec::load_spec(&spec_path)
+        .map_err(|e| SpMcpError::Check(format!("failed to load spec: {}", e)))?;
+    let options = check::engine::CheckOptions {
+        check_ids: check_ids.map(|ids| ids.to_vec()),
+        ..Default::default()
+    };
+    let results = check::engine::run_checks(&spec, &pdf_abs, &options)
+        .map_err(|e| SpMcpError::Check(format!("check run failed: {}", e)))?;
+    let report = check::report::build_report(results);
+
+    let stem = pdf_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "out".to_string());
+    let out_name = format!("{stem}.annotated.pdf");
+
+    let out_dir = workspace.join("out");
+    std::fs::create_dir_all(&out_dir)?;
+    let out_root = canonical_root(&out_dir, "output directory")?;
+    let out_path = output_under(&out_root, Path::new(&out_name), "output path")?;
+
+    sp_annotate::annotate_file(&pdf_abs, &out_path, &report)
+        .map_err(|e| SpMcpError::Annotate(e.to_string()))?;
+
+    Ok(out_path)
+}
+
 // ponytail: heuristic source hints per check ID. Checks don't know which
 // Typst files produce a given PDF page, so we map checker IDs to likely
 // source files based on the workspace convention (entry.typ has #set page,
@@ -881,6 +927,50 @@ mod tests {
         assert!(outcome_ids.contains(&"global_margins"));
         assert!(outcome_ids.contains(&"margin_symmetry"));
         assert!(!outcome_ids.contains(&"font_size_consistent"));
+    }
+
+    #[test]
+    fn annotate_pdf_writes_annotated_copy() {
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let catalog = (0..6)
+            .map(|i| {
+                let mut p = manifest_dir.clone();
+                for _ in 0..=i {
+                    p.pop();
+                }
+                p.join("scholarpress-catalog")
+            })
+            .find(|p| p.is_dir());
+        let catalog = match catalog {
+            Some(p) => p,
+            None => {
+                eprintln!("SKIP: scholarpress-catalog not found");
+                return;
+            }
+        };
+        let baseline = catalog.join("institutions/iu-indianapolis/tests/fixtures/baseline.pdf");
+        if !baseline.is_file() {
+            eprintln!("SKIP: IU baseline fixture not present (run bash compile.sh)");
+            return;
+        }
+
+        let ws = local_tempdir();
+        fs::write(
+            ws.join("spec.yaml"),
+            fs::read_to_string(catalog.join("institutions/iu-indianapolis/spec.yaml")).unwrap(),
+        )
+        .unwrap();
+        fs::copy(&baseline, ws.join("baseline.pdf")).unwrap();
+
+        let cfg = Config::new(catalog, ws.parent().unwrap().to_path_buf());
+        let out = annotate_pdf(&cfg, &ws, Path::new("baseline.pdf"), None).unwrap();
+        assert!(
+            out.is_file(),
+            "annotated pdf should exist at {}",
+            out.display()
+        );
+        assert!(out.ends_with("baseline.annotated.pdf"));
+        assert!(fs::read(&out).unwrap().starts_with(b"%PDF"));
     }
 
     #[test]
