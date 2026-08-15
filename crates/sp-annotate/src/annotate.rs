@@ -26,6 +26,13 @@ pub(crate) fn note_contents(
     s
 }
 
+/// Map any non-ASCII character to '?' so the summary page stays ASCII-only.
+fn ascii_only(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_ascii() { c } else { '?' })
+        .collect()
+}
+
 /// Build the ASCII text rendered on the prepended summary page:
 /// counts plus document-level (non-bbox) findings only.
 pub(crate) fn summary_text(report: &Report) -> String {
@@ -53,10 +60,10 @@ pub(crate) fn summary_text(report: &Report) -> String {
         count += 1;
         lines.push(format!("[{}] {}", r.status.as_str(), r.check_id));
         if !r.detail.is_empty() {
-            lines.push(format!("    {}", r.detail));
+            lines.push(format!("    {}", ascii_only(&r.detail)));
         }
         for e in &doc_evidence {
-            let ex = e.excerpt.as_deref().unwrap_or("");
+            let ex = ascii_only(e.excerpt.as_deref().unwrap_or(""));
             lines.push(format!("    page {}  {}", e.page, ex));
         }
     }
@@ -77,10 +84,9 @@ pub(crate) fn annotate_bytes(
     // `merge_from_bytes`, so the source must be annotated before it is merged.
     let mut editor = DocumentEditor::from_bytes(input.to_vec())?;
     let page_count = editor.current_page_count();
-    let mut heights = vec![0.0f32; page_count];
-    for (i, h) in heights.iter_mut().enumerate() {
-        let mb = editor.get_page_media_box(i)?;
-        *h = mb[3] - mb[1];
+    let mut media_boxes = vec![[0.0f32; 4]; page_count];
+    for (i, mb) in media_boxes.iter_mut().enumerate() {
+        *mb = editor.get_page_media_box(i)?;
     }
 
     for result in &report.results {
@@ -93,8 +99,14 @@ pub(crate) fn annotate_bytes(
             if page_idx == 0 || page_idx > page_count {
                 continue;
             }
-            let h = heights[page_idx - 1];
+            let mb = media_boxes[page_idx - 1];
+            let h = mb[3] - mb[1];
             let rect = bbox_to_rect(bbox, h);
+            let rect = if rect.width < 1.0 {
+                Rect::new(mb[0], rect.y, mb[2] - mb[0], rect.height)
+            } else {
+                rect
+            };
             let note_rect = Rect::new(rect.x, (rect.y + rect.height - 14.0).max(0.0), 14.0, 14.0);
             let contents = note_contents(
                 &result.check_id,
@@ -260,6 +272,13 @@ mod tests {
                 pdf_oxide::annotation_types::AnnotationSubtype::Highlight
             )),
             "expected a highlight annotation"
+        );
+        assert!(
+            annots.iter().any(|a| matches!(
+                a.subtype_enum,
+                pdf_oxide::annotation_types::AnnotationSubtype::Text
+            )),
+            "expected a text (sticky note) annotation"
         );
     }
 }

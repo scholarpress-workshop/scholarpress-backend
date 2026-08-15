@@ -226,13 +226,18 @@ mod tests {
                 }],
                 detail: "margins too small".to_string(),
             },
+            make_result(Status::Manual),
         ];
         let report = build_report(results);
         let json = format_json(&report).expect("json");
         let parsed: Report = serde_json::from_str(&json).expect("parse back");
-        assert_eq!(parsed.results.len(), 3);
+        assert_eq!(parsed.results.len(), 4);
         assert_eq!(parsed.results[0].status, Status::Fail);
-        assert_eq!(parsed.results[2].evidence[0].bbox, Some((10.0, 20.0, 30.0, 40.0)));
+        assert_eq!(
+            parsed.results[2].evidence[0].bbox,
+            Some((10.0, 20.0, 30.0, 40.0))
+        );
         assert_eq!(parsed.summary.fail, 1);
+        assert_eq!(parsed.summary.manual, 1);
     }
 }
