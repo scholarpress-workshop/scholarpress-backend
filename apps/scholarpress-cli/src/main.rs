@@ -1,3 +1,4 @@
+mod annotate;
 mod calibrate;
 mod check;
 
@@ -18,6 +19,8 @@ enum Commands {
     Check(check::CheckArgs),
     /// Run checks across a corpus of PDFs for calibration
     Calibrate(calibrate::CalibrateArgs),
+    /// Annotate a dissertation PDF with check-report findings
+    Annotate(annotate::AnnotateArgs),
 }
 
 fn main() {
@@ -25,5 +28,6 @@ fn main() {
     match &cli.command {
         Commands::Check(args) => check::run(args),
         Commands::Calibrate(args) => calibrate::run(args),
+        Commands::Annotate(args) => annotate::run(args),
     }
 }
