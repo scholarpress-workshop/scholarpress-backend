@@ -10,6 +10,10 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+/// Full agent-facing instructions surfaced via `ServerHandler::get_info()`.
+/// Edited in one place so unit tests can assert its content.
+pub(crate) const SERVER_INSTRUCTIONS: &str = "ScholarPress workflow: call list_profiles, create_workspace, and interface_doc first. Convert the DOCX with pandoc_convert(format: \"ast\") and pandoc_convert(format: \"typst\") as needed. Write entry.typ and chapter files, then call compile_typst and check_pdf. Use check_ids to isolate PDF failures. After check_pdf reports failures, call annotate_pdf to produce a visually annotated copy for the author. The source DOCX is the source of truth for content; the workspace template is the source of truth for formatting — never edit the template to reproduce the source document's formatting. Pandoc output is best effort; use TOC text to map sections and clean Typst artifacts such as #underline[...] and #strong[...].";
+
 #[derive(Clone)]
 pub struct ScholarPressService {
     config: Arc<Config>,
@@ -210,8 +214,57 @@ impl rmcp::handler::server::ServerHandler for ScholarPressService {
         let server_info = Implementation::new("scholarpress-mcp", env!("CARGO_PKG_VERSION"));
         ServerInfo::new(capabilities)
             .with_server_info(server_info)
-            .with_instructions(
-                "ScholarPress workflow: call list_profiles, create_workspace, and interface_doc first. Convert the DOCX with pandoc_convert(format: \"ast\") and pandoc_convert(format: \"typst\") as needed. Write entry.typ and chapter files, then call compile_typst and check_pdf. Use check_ids to isolate PDF failures. After check_pdf reports failures, call annotate_pdf to produce a visually annotated copy for the author. The source DOCX is the source of truth for content; the workspace template is the source of truth for formatting — never edit the template to reproduce the source document's formatting. Pandoc output is best effort; use TOC text to map sections and clean Typst artifacts such as #underline[...] and #strong[...].",
-            )
+            .with_instructions(SERVER_INSTRUCTIONS)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn server_instructions_include_partial_draft_intake_prompt() {
+        // The intake guidance must be at the START of the instructions,
+        // before the existing "ScholarPress workflow:" sentence.
+        let prefix_end = SERVER_INSTRUCTIONS
+            .find("ScholarPress workflow:")
+            .expect("legacy workflow text must still be present");
+        let prefix = &SERVER_INSTRUCTIONS[..prefix_end];
+        assert!(
+            prefix.contains("do NOT immediately call"),
+            "intake prompt must warn agent not to jump straight to pandoc_convert/compile_typst; prefix was: {prefix}"
+        );
+        assert!(
+            prefix.contains("three things"),
+            "intake prompt must enumerate three intake questions; prefix was: {prefix}"
+        );
+        assert!(
+            prefix.contains("Wait for the user"),
+            "intake prompt must instruct the agent to wait for the response; prefix was: {prefix}"
+        );
+    }
+
+    #[test]
+    fn server_instructions_include_placeholder_convention() {
+        assert!(
+            SERVER_INSTRUCTIONS.contains("PLACEHOLDER(<section_id>)"),
+            "skeleton-branch guidance must document the PLACEHOLDER comment convention"
+        );
+        assert!(
+            SERVER_INSTRUCTIONS.contains("Do NOT call missing section functions"),
+            "skeleton-branch guidance must warn against calling section functions with placeholder values"
+        );
+    }
+
+    #[test]
+    fn server_instructions_include_hitl_pause() {
+        assert!(
+            SERVER_INSTRUCTIONS.contains("pause and report findings"),
+            "HITL pause guidance must be present after the first compile/check cycle"
+        );
+        assert!(
+            SERVER_INSTRUCTIONS.contains("explicit confirmation"),
+            "HITL pause guidance must require explicit confirmation before the next action"
+        );
     }
 }
