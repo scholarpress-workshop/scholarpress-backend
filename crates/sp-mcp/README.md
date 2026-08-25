@@ -53,16 +53,22 @@ Binary: `target/release/sp-mcp`
 Restart OpenCode after editing. The server appears in the MCP panel as
 "scholarpress" with the current tool set.
 
-## OpenWork local HTTP
+## Goose on Windows
 
-For native Windows, use the platform archive and launcher under `packaging/`.
-The launcher creates a dedicated `.scholarpress` directory inside the selected
-OpenWork workspace, starts `sp-mcp` on loopback, and prints the MCP URL. Add
-that URL in OpenWork under `Settings` > `Extensions` > `Add Custom App`.
+For native Windows, use the platform archive and setup script under
+`packaging/`. The script creates a dedicated `.scholarpress` directory inside
+the selected project, then adds `sp-mcp.exe` as a standard Goose command-line
+extension. Goose Desktop and Goose CLI share the resulting configuration.
 
-Use `--transport http --bind 127.0.0.1 --port 8765` directly when starting the
-server without a launcher. WSL uses the Linux archive; native Windows uses the
-Windows archive and does not require WSL.
+```powershell
+.\setup-goose.ps1 -ProjectPath "C:\Projects\dissertation"
+```
+
+Use `-CatalogPath`, `-TypstPath`, or `-PandocPath` for development overrides.
+The setup script does not run a long-lived server; Goose owns the `sp-mcp.exe`
+process. Manual configuration through Goose's custom-extension UI or
+`goose configure` is also supported. WSL uses the Linux stdio workflow; native
+Windows uses the Windows archive and does not require WSL.
 
 ## Tools
 

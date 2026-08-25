@@ -19,7 +19,7 @@ Copy-Item (Join-Path $RepoRoot $SpMcpPath) "$Bundle\sp-mcp.exe"
 Copy-Item $TypstPath "$Bundle\bin\typst.exe"
 Copy-Item $PandocPath "$Bundle\bin\pandoc.exe"
 Copy-Item -Recurse (Join-Path $RepoRoot "..\scholarpress-catalog\institutions") "$Bundle\catalog\institutions"
-Copy-Item "$PSScriptRoot\start-scholarpress.ps1" $Bundle
+Copy-Item "$PSScriptRoot\setup-goose.ps1" $Bundle
 Copy-Item "$PSScriptRoot\README-WINDOWS.md" $Bundle
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
