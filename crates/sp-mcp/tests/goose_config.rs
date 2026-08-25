@@ -66,6 +66,33 @@ fn non_mapping_extensions_is_rejected() {
 }
 
 #[test]
+fn scalar_top_level_config_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("config.yaml");
+    std::fs::write(&config, "not-a-map\n").unwrap();
+
+    let error = update_config(&test_setup(&config)).unwrap_err();
+    assert!(error.to_string().contains("top level"));
+}
+
+#[test]
+fn existing_scholarpress_entry_is_replaced() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("config.yaml");
+    std::fs::write(
+        &config,
+        "extensions:\n  scholarpress:\n    cmd: old.exe\n  other:\n    cmd: other.exe\n",
+    )
+    .unwrap();
+
+    update_config(&test_setup(&config)).unwrap();
+    let value: serde_yaml::Value =
+        serde_yaml::from_str(&std::fs::read_to_string(&config).unwrap()).unwrap();
+    assert_ne!(value["extensions"]["scholarpress"]["cmd"], "old.exe");
+    assert_eq!(value["extensions"]["other"]["cmd"], "other.exe");
+}
+
+#[test]
 fn missing_config_is_created_and_backup_records_empty_state() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join("nested").join("config.yaml");

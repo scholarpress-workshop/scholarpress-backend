@@ -64,6 +64,10 @@ jobs:
         working-directory: scholarpress-backend
         shell: powershell
         run: .\packaging\build-bundle.ps1
+      - name: Test Goose setup script
+        working-directory: scholarpress-backend
+        shell: powershell
+        run: .\packaging\tests\setup-goose.Tests.ps1 -ServerPath .\target\x86_64-pc-windows-msvc\release\sp-mcp.exe
       - uses: actions/upload-artifact@v4
         with:
           name: scholarpress-windows-x86_64
