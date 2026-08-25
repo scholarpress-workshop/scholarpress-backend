@@ -1,5 +1,6 @@
 pub mod config;
 pub mod error;
+pub mod goose_config;
 pub mod tools;
 pub mod workspace;
 
@@ -16,6 +17,8 @@ use serde_json::json;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+
+pub use goose_config::{update_config, GooseConfigError, GooseSetup};
 
 pub async fn run(config: Config) -> Result<()> {
     run_with_options(config, ServerOptions::default()).await

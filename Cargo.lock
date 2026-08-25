@@ -3074,6 +3074,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_yaml",
  "sp-annotate",
  "sp-check",
  "sp-typst",
