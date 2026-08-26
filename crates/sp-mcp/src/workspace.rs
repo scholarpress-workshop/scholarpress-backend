@@ -1015,7 +1015,7 @@ mod tests {
         let ws = local_tempdir();
         let f = ws.join("foo.xyz");
         fs::write(&f, b"whatever").unwrap();
-        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let config = Config::new(PathBuf::from("/tmp"), ws.parent().unwrap().to_path_buf());
         let result = pandoc_convert(&config, &f, "typst", &ws);
         assert!(matches!(result, Err(SpMcpError::Conversion(_))));
     }
@@ -1025,7 +1025,7 @@ mod tests {
         let ws = local_tempdir();
         let f = ws.join("test.docx");
         fs::write(&f, b"fake").unwrap();
-        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let config = Config::new(PathBuf::from("/tmp"), ws.parent().unwrap().to_path_buf());
         let result = pandoc_convert(&config, &f, "xml", &ws);
         assert!(matches!(result, Err(SpMcpError::Conversion(_))));
     }
@@ -1033,7 +1033,7 @@ mod tests {
     #[test]
     fn pandoc_convert_missing_file_errors() {
         let ws = local_tempdir();
-        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let config = Config::new(PathBuf::from("/tmp"), ws.parent().unwrap().to_path_buf());
         let result = pandoc_convert(&config, &ws.join("missing.docx"), "typst", &ws);
         assert!(matches!(result, Err(SpMcpError::PathViolation(_))));
     }
@@ -1042,7 +1042,7 @@ mod tests {
     fn interface_doc_reads_ref_json_or_errors_if_missing() {
         let ws = local_tempdir();
         // Case 1: no REFERENCE.json → error
-        let config = Config::new(PathBuf::from("/tmp"), PathBuf::from("/tmp"));
+        let config = Config::new(PathBuf::from("/tmp"), ws.parent().unwrap().to_path_buf());
         let result = interface_doc(&config, &ws);
         match result {
             Err(SpMcpError::Compilation(msg)) => {
