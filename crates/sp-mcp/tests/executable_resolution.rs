@@ -31,9 +31,9 @@ fn explicit_tool_override_wins_over_bundle_and_path() {
 
     let resolved = resolver.resolve("typst", Some(&override_path)).unwrap();
 
-    assert_eq!(resolved, override_path);
-    assert_ne!(resolved, bundled);
-    assert_ne!(resolved, from_path);
+    assert_eq!(resolved, std::fs::canonicalize(&override_path).unwrap());
+    assert_ne!(resolved, std::fs::canonicalize(&bundled).unwrap());
+    assert_ne!(resolved, std::fs::canonicalize(&from_path).unwrap());
 }
 
 #[test]
@@ -47,7 +47,10 @@ fn bundle_tool_is_used_before_path() {
         vec![path_dir.path().to_path_buf()],
     );
 
-    assert_eq!(resolver.resolve("typst", None).unwrap(), bundled);
+    assert_eq!(
+        resolver.resolve("typst", None).unwrap(),
+        std::fs::canonicalize(&bundled).unwrap()
+    );
 }
 
 #[test]
@@ -60,7 +63,10 @@ fn path_tool_is_used_when_bundle_tool_is_missing() {
         vec![path_dir.path().to_path_buf()],
     );
 
-    assert_eq!(resolver.resolve("typst", None).unwrap(), from_path);
+    assert_eq!(
+        resolver.resolve("typst", None).unwrap(),
+        std::fs::canonicalize(&from_path).unwrap()
+    );
 }
 
 #[test]
