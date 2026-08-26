@@ -18,7 +18,7 @@ $Bundle = Join-Path $TempRoot "bundle"
 $Project = Join-Path $TempRoot "project"
 $Config = Join-Path $TempRoot "goose\config.yaml"
 try {
-    New-Item -ItemType Directory -Force -Path "$Bundle\bin", "$Bundle\catalog\institutions", $Project | Out-Null
+    New-Item -ItemType Directory -Force -Path "$Bundle\bin", "$Bundle\catalog\institutions", $Project, (Split-Path $Config) | Out-Null
     Copy-Item $ServerPath "$Bundle\sp-mcp.exe"
     Set-Content -LiteralPath "$Bundle\bin\typst.exe" -Value "stub"
     Set-Content -LiteralPath "$Bundle\bin\pandoc.exe" -Value "stub"
