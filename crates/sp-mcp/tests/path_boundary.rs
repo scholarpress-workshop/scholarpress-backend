@@ -78,10 +78,13 @@ fn rejects_junction_escape() {
     std::fs::create_dir_all(&workspace).unwrap();
     std::fs::create_dir_all(root.path().join("catalog")).unwrap();
     std::fs::write(outside.path().join("entry.typ"), "= Outside").unwrap();
+    let command = format!(
+        "/C mklink /J \"{}\" \"{}\"",
+        workspace.join("linked").display(),
+        outside.path().display()
+    );
     let status = std::process::Command::new("cmd")
-        .args(["/C", "mklink", "/J"])
-        .arg(workspace.join("linked"))
-        .arg(outside.path())
+        .arg(command)
         .status()
         .unwrap();
     assert!(status.success());
